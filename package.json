@@ -1,0 +1,126 @@
+{
+	"name": "graphicaldebugging-vscode",
+	"version": "0.1.0",
+	"publisher": "AdamWulkiewicz",
+	"author": {
+		"name": "Adam Wulkiewicz"
+	},
+	"engines": {
+		"vscode": "^1.61.0"
+	},
+	"license": "MIT",
+	"displayName": "Graphical Debugging",
+	"description": "Visualization of variables during debugging, e.g. Boost.Geometry models, containers of values, arrays of points, etc.",
+	"categories": [
+		"Debuggers", "Other", "Visualization"
+	],
+	"keywords": [
+		"debug", "debugging", "geometry", "plot", "visualization"
+	],
+	"icon": "resources/icon.png",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/awulkiew/graphical-debugging-vscode"
+	},
+	"homepage": "https://github.com/awulkiew/graphical-debugging-vscode/blob/master/README.md",
+
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onView:graphicalWatch",
+		"onDebug"
+	],	
+	"contributes": {
+		"views": {
+			"debug": [
+				{
+					"id": "graphicalWatch",
+					"name": "Graphical Watch"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "graphicalWatch.add",
+				"title": "Add",
+				"icon": {
+					"light": "resources/light/add.svg",
+					"dark": "resources/dark/add.svg"
+				}
+			},
+			{
+				"command": "graphicalWatch.removeAll",
+				"title": "Remove All",
+				"icon": {
+					"light": "resources/light/close-all.svg",
+					"dark": "resources/dark/close-all.svg"
+				}
+			},
+			{
+				"command": "graphicalWatch.edit",
+				"title": "Edit",
+				"icon": {
+					"light": "resources/light/edit.svg",
+					"dark": "resources/dark/edit.svg"
+				}
+			},
+			{
+				"command": "graphicalWatch.remove",
+				"title": "Remove",
+				"icon": {
+					"light": "resources/light/close.svg",
+					"dark": "resources/dark/close.svg"
+				}
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "graphicalWatch.add",
+					"when": "view == graphicalWatch",
+					"group": "navigation"
+				},
+				{
+					"command": "graphicalWatch.removeAll",
+					"when": "view == graphicalWatch",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "graphicalWatch.edit",
+					"when": "view == graphicalWatch && viewItem == watchVariable",
+					"group": "inline"
+				},
+				{
+					"command": "graphicalWatch.remove",
+					"when": "view == graphicalWatch && viewItem == watchVariable",
+					"group": "inline"
+				}
+			]
+		}
+	},
+	"dependencies": {
+		"vscode-debugprotocol": "1.49.0"
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src --ext ts",
+		"test": "node ./out/test/runTest.js"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.61.0",
+		"@types/glob": "^7.1.4",
+		"@types/mocha": "^9.0.0",
+		"@types/node": "14.x",
+		"@typescript-eslint/eslint-plugin": "^4.31.1",
+		"@typescript-eslint/parser": "^4.31.1",
+		"eslint": "^7.32.0",
+		"glob": "^7.1.7",
+		"mocha": "^9.1.1",
+		"typescript": "^4.4.3",
+		"@vscode/test-electron": "^1.6.2"
+	}
+}
