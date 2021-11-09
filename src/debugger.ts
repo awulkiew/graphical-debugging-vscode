@@ -18,6 +18,8 @@ export class MachineInfo {
     {}
 }
 
+export enum Language { Cpp, Java, JavaScript, Python };
+
 export class Debugger {
     private _onStopped: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
 	readonly onStopped: vscode.Event<void> = this._onStopped.event;
@@ -104,18 +106,20 @@ export class Debugger {
         return this.sessionInfo !== undefined;
     }
 
-    language(): string | undefined {
+    language(): Language | undefined {
         if (this.sessionInfo === undefined
             || this.sessionInfo.session === undefined
             || this.sessionInfo.session.type === undefined)
             return undefined;
         const sessionType = this.sessionInfo.session.type;
-        if (sessionType.indexOf('cpp') >= 0)
-            return 'cpp';
-        else if (sessionType.indexOf('python') >= 0)
-            return 'py';
-        else if (sessionType.indexOf('node') >= 0)
-            return 'js';
+        if (sessionType === 'cppvsdbg' || sessionType === 'cppdbg')
+            return Language.Cpp;
+        else if (sessionType === 'python')
+            return Language.Python;
+        else if (sessionType === 'node' || sessionType === 'chrome')
+            return Language.JavaScript;
+        else if (sessionType === 'java')
+            return Language.Java;
         else
             return undefined;
     }
