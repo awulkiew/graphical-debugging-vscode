@@ -5,6 +5,12 @@ This extension allows to display graphical representation of variables during de
 
 ![Graphical Debugging](resources/extension.png)
 
+##### Instructions
+
+1. Place a breakpoint
+2. Start debugging
+3. After clicking + in Graphical Watch write the name of a variable
+
 ##### Supported types
 
 * Containers of values, points and other geometries
