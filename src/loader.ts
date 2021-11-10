@@ -367,6 +367,21 @@ export class Linestring extends Geometry {
     }
 }
 
+export class Ring extends Geometry {
+    constructor(private _containerExpr: EvaluatedExpression, private _points: Points) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const contStr = this._containerExpr.expression.toString(variable);
+        const contVar = new Variable(contStr, this._containerExpr.type);
+        const plot = await this._points.load(dbg, contVar);
+        if (plot instanceof draw.Plot && plot.xs)
+            return new draw.Ring(plot.xs, plot.ys);
+        else
+            return undefined;
+    }
+}
+
 // Return Container or Loader for Variable based on JSON definitions
 export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Container | Value | Loader | undefined> {
     const language: debug.Language | undefined = dbg.language();
@@ -411,6 +426,23 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                                     const pointsLoad = await getLoader(dbg, contVar);
                                     if (pointsLoad instanceof Points) {
                                         return new Linestring(contExpr, pointsLoad);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (entry.kind === 'ring') {
+                    if (entry.points) {
+                        if (entry.points.container) {
+                            if (entry.points.container.name) {
+                                const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
+                                if (contExpr) {
+                                    const contVar = contExpr.variable;
+                                    // TODO: only search for Container of Points 
+                                    const pointsLoad = await getLoader(dbg, contVar);
+                                    if (pointsLoad instanceof Points) {
+                                        return new Ring(contExpr, pointsLoad);
                                     }
                                 }
                             }

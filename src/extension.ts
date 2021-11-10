@@ -7,7 +7,7 @@ import * as draw from './drawable'
 import * as colors from './colors.json'
 
 
-async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable) {
+async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<draw.DrawableData> {
 	gwVariable.description = 'not available';
 	const expr = await dbg.evaluate(gwVariable.name);
 	if (expr && expr.type) {
@@ -18,32 +18,46 @@ async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable)
 		if (loader instanceof load.Loader) {
 			const drawable = await loader.load(dbg, variable);
 			if (drawable) {
-				const themeColors = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ? colors.light : colors.dark;
-				const colorStr = gwVariable.color >= 0 ? themeColors.colors[gwVariable.color] : themeColors.color;
-				return drawable.toPlotly(colorStr);
+				return drawable.toData(gwVariable.color);
 			}
 		}
 	}
-	return {};
+	return new draw.DrawableData(undefined, undefined, gwVariable.color);
 }
 
-let messageData = {
-	color: '#888',
-	gridcolor: '#888',
-	activecolor: '#888',
-	traces: [] as any
-};
+let drawableData: draw.DrawableData[] = [];
 
-function setMessageColors(colorTheme: vscode.ColorTheme, messageData: any) {
+function prepareMessage(drawableData: draw.DrawableData[], colorTheme: vscode.ColorTheme): any {
+	let message = {
+		color: '#888',
+		gridcolor: '#888',
+		activecolor: '#888',
+		traces: [] as any,
+		shapes: [] as any,
+	};
 	if (colorTheme.kind === vscode.ColorThemeKind.Light) {
-		messageData.color = '#111';
-		messageData.gridcolor = '#777';
-		messageData.activecolor = '#aaa';
+		message.color = '#111';
+		message.gridcolor = '#777';
+		message.activecolor = '#aaa';
 	} else { // Dark or HighContrast
-		messageData.color = '#eee';
-		messageData.gridcolor = '#888';
-		messageData.activecolor = '#bbb';
+		message.color = '#eee';
+		message.gridcolor = '#888';
+		message.activecolor = '#bbb';
 	}
+	const themeColors = colorTheme.kind === vscode.ColorThemeKind.Light ? colors.light : colors.dark;
+	for (let d of drawableData) {
+		const colorStr = d.colorId >= 0 ? themeColors.colors[d.colorId] : themeColors.color;
+		if (d.trace) {
+			d.trace.line.color = colorStr + 'CC';
+			message.traces.push(d.trace);
+		}
+		if (d.shape) {
+			d.shape.line.color = colorStr + 'CC';
+			d.shape.fillcolor = colorStr + '55';
+			message.shapes.push(d.shape);
+		}
+	}
+	return message;
 }
 
 
@@ -65,15 +79,16 @@ export function activate(context: vscode.ExtensionContext) {
 			console.log(machineInfo.endianness === Endianness.Little ? 'little endian' : 'big endian');
 		}
 
-		messageData.traces = [];
+		drawableData = [];
 		for (let variable of graphicalWatch.variables) {
-			messageData.traces.push(await handleVariable(debugHelper, variable));
+			const d = await handleVariable(debugHelper, variable);
+			drawableData.push(d);
 		}
 		graphicalWatch.refreshAll();
 
-		if (messageData.traces.length > 0) {
-			setMessageColors(vscode.window.activeColorTheme, messageData);
-			webview.showAndPostMessage(messageData);
+		const message = prepareMessage(drawableData, vscode.window.activeColorTheme);
+		if (message.traces.length > 0 || message.shapes.length > 0) {
+			webview.showAndPostMessage(message);
 		}
 
 		// let expr2 = await debugHelper.evaluate("&arrd[0]");
@@ -103,15 +118,16 @@ export function activate(context: vscode.ExtensionContext) {
 			if (e.variable) {
 				if (debugHelper.isStopped()) {
 					const d = await handleVariable(debugHelper, e.variable);
-					if (e.eventType === GraphicalWatchEventType.Add)
-						messageData.traces.push(d);
-					else {
+					if (e.eventType === GraphicalWatchEventType.Add) {
+						drawableData.push(d);
+					} else {
 						const i = graphicalWatch.variables.indexOf(e.variable);
-						if (i >= 0 && i < messageData.traces.length)
-							messageData.traces[i] = d;
+						if (i >= 0 && i < drawableData.length) {
+							drawableData[i] = d;
+						}
 					}
-					setMessageColors(vscode.window.activeColorTheme, messageData);
-					webview.showAndPostMessage(messageData);
+					const message = prepareMessage(drawableData, vscode.window.activeColorTheme);
+					webview.showAndPostMessage(message);
 				} else {
 					e.variable.description = 'not available';
 				}
@@ -120,31 +136,25 @@ export function activate(context: vscode.ExtensionContext) {
 		} else if (e.eventType === GraphicalWatchEventType.Remove) {
 			if (e.variable) {
 				const i = graphicalWatch.variables.indexOf(e.variable);
-				if (i >= 0 && i < messageData.traces.length) {
-					messageData.traces.splice(i, 1);
-					if (messageData.traces.length > 0) {
-						webview.showAndPostMessage(messageData);
+				if (i >= 0 && i < drawableData.length) {
+					drawableData.splice(i, 1);
+					if (drawableData.length > 0) {
+						const message = prepareMessage(drawableData, vscode.window.activeColorTheme);
+						webview.showAndPostMessage(message);
 					} else {
 						webview.hide();
 					}
 				}
 			}
 		} else if (e.eventType === GraphicalWatchEventType.RemoveAll) {
-			messageData.traces = [];
+			drawableData = [];
 			webview.hide();
 		}
 	});
 
 	vscode.window.onDidChangeActiveColorTheme((e: vscode.ColorTheme) => {
-		setMessageColors(e, messageData);
-		const themeColors = e.kind === vscode.ColorThemeKind.Light ? colors.light : colors.dark;		
-		// TODO: This only works for Plots
-		for (let i = 0; i < graphicalWatch.variables.length; ++i) {
-			let variable = graphicalWatch.variables[i];
-			const colorStr = variable.color >= 0 ? themeColors.colors[variable.color] : themeColors.color;
-			messageData.traces[i].line = { color: colorStr };
-		}
-		webview.postMessage(messageData);
+		const message = prepareMessage(drawableData, e);
+		webview.postMessage(message);
 	});
 
 	console.log('Congratulations, your extension is now active!');

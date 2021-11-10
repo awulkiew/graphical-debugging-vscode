@@ -84,7 +84,6 @@ export class Webview {
 							responsive: true,
 							scrollZoom: true
 						};
-						var traces = [];
 					</script>
 				</head>
 				<body style="margin:0;padding:0;height:100%;">
@@ -93,8 +92,9 @@ export class Webview {
 						window.addEventListener('message', event => {
 							plot = document.getElementById('plot');
 							layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor);
-							traces = event.data.traces;
-							Plotly.newPlot(plot, traces, layout, config);
+							if (event.data.shapes.length > 0)
+								layout.shapes = event.data.shapes;
+							Plotly.newPlot(plot, event.data.traces, layout, config);
 						});
 					</script>
 				</body>

@@ -1,47 +1,92 @@
+export class DrawableData {
+    constructor(
+        public trace: any,
+        public shape: any,
+        public colorId: number)
+    {}
+}
+
 export class Drawable {
-    toPlotly(color: string): any {
-        return {};
+    toData(colorId: number): DrawableData {
+        return new DrawableData(undefined, undefined, colorId);
     }
 };
 
 export class Plot extends Drawable {
-    constructor(xs: number[] | undefined, ys: number[]) {
+    constructor(
+        public readonly xs: number[] | undefined,
+        public readonly ys: number[]) {
         super();
-        this._xs = xs;
-        this._ys = ys;
     }
-    toPlotly(color: string): any {
-        if (this._ys.length > 0) {
-            return {
-                x: this._xs === undefined ? Array.from(Array(this._ys.length).keys()) : this._xs,
-                y: this._ys,
+    toData(colorId: number): any {
+        let trace: any = undefined;
+        if (this.ys.length > 0) {
+            trace = {
+                x: this.xs === undefined ? Array.from(Array(this.ys.length).keys()) : this.xs,
+                y: this.ys,
                 type: "scatter",
                 mode: "lines+markers",
-                line: { color: color }
+                hoverinfo: "x+y",
+                line: { color: "#888" }
             };
         }
-        else {
-            return {};
-        }
+        return new DrawableData(trace, undefined, colorId);
     }
-    private _xs: number[] | undefined;
-    private _ys: number[];
 };
 
 export class Geometry extends Drawable {
 }
 
 export class Point extends Geometry {
-    constructor(public x: number, public y: number) {
+    constructor(
+        public readonly x: number,
+        public readonly y: number) {
         super();
     }
-    toPlotly(color: string): any {
-        return {
+    toData(colorId: number): any {
+        let trace = {
             x: [this.x],
             y: [this.y],
             type: "scatter",
             mode: "markers",
-            line: { color: color }
+            hoverinfo: "x+y",
+            line: { color: "#888" }
         };
+        return new DrawableData(trace, undefined, colorId);
     }
 }
+
+export class Ring extends Drawable {
+    constructor(
+        public readonly xs: number[],
+        public readonly ys: number[]) {
+        super();
+    }
+    toData(colorId: number): any {
+        let trace: any = undefined;
+        let shape: any = undefined;
+        const length = Math.min(this.xs.length, this.ys.length);
+        if (length > 0) {
+            let path: string = 'M' + this.xs[0] + ',' + this.ys[0] + ' ';
+            for (let i = 1 ; i < length ; ++i) {
+                path += 'L' + this.xs[i] + ',' + this.ys[i] + ' ';
+            }
+            path += 'Z';
+            trace = {
+                x: this.xs,
+                y: this.ys,
+                type: "scatter",
+                mode: "markers",
+                hoverinfo: "x+y",
+                line: { color: "#888" }
+            };
+            shape = {
+                path: path,
+                type: "path",
+                fillcolor: "#888",
+                line: { color: "888" }
+            };
+        }
+        return new DrawableData(trace, shape, colorId);
+    }
+};
