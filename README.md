@@ -17,6 +17,9 @@ This extension allows to display graphical representation of variables during de
   * C-style array
   * STL: `array`, `vector`
   * Boost.Array: `array`
+  * Boost.Geometry: `varray`
+* 1D values
+  * Boost.Units: `quantity`   
 * 2D cartesian geometries
-  * Boost.Geometry: `point`, `linestring`
   * STL: `pair`
+  * Boost.Geometry: `point`, `linestring`, `ring`, `polygon`
