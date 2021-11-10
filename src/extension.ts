@@ -7,7 +7,7 @@ import * as draw from './drawable'
 import * as colors from './colors.json'
 
 
-async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<draw.DrawableData> {
+async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<draw.PlotlyData> {
 	gwVariable.description = 'not available';
 	const expr = await dbg.evaluate(gwVariable.name);
 	if (expr && expr.type) {
@@ -18,16 +18,16 @@ async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable)
 		if (loader instanceof load.Loader) {
 			const drawable = await loader.load(dbg, variable);
 			if (drawable) {
-				return drawable.toData(gwVariable.color);
+				return drawable.toPlotly(gwVariable.color);
 			}
 		}
 	}
-	return new draw.DrawableData(undefined, undefined, gwVariable.color);
+	return new draw.PlotlyData([], [], gwVariable.color);
 }
 
-let drawableData: draw.DrawableData[] = [];
+let drawableData: draw.PlotlyData[] = [];
 
-function prepareMessage(drawableData: draw.DrawableData[], colorTheme: vscode.ColorTheme): any {
+function prepareMessage(drawableData: draw.PlotlyData[], colorTheme: vscode.ColorTheme): any {
 	let message = {
 		color: '#888',
 		gridcolor: '#888',
@@ -47,14 +47,14 @@ function prepareMessage(drawableData: draw.DrawableData[], colorTheme: vscode.Co
 	const themeColors = colorTheme.kind === vscode.ColorThemeKind.Light ? colors.light : colors.dark;
 	for (let d of drawableData) {
 		const colorStr = d.colorId >= 0 ? themeColors.colors[d.colorId] : themeColors.color;
-		if (d.trace) {
-			d.trace.line.color = colorStr + 'CC';
-			message.traces.push(d.trace);
+		for (let trace of d.traces) {
+			trace.line.color = colorStr + 'CC';
+			message.traces.push(trace);
 		}
-		if (d.shape) {
-			d.shape.line.color = colorStr + 'CC';
-			d.shape.fillcolor = colorStr + '55';
-			message.shapes.push(d.shape);
+		for (let shape of d.shapes) {
+			shape.line.color = colorStr + 'CC';
+			shape.fillcolor = colorStr + '55';
+			message.shapes.push(shape);
 		}
 	}
 	return message;

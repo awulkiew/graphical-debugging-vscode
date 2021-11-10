@@ -127,6 +127,15 @@
         "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
     },
     {
+        "type": "boost::geometry::model::polygon<.+>",
+        "kind": "polygon",
+        "exteriorring": { "name": "$this.m_outer" },
+        "interiorrings": {
+            "container": { "name": "$this.m_inners" }
+        },
+        "_comment": "This doesn't work with GDB right now because the types of members are typedefs"
+    },
+    {
         "type": "boost::geometry::index::detail::varray<.+>",
         "kind": "container",
         "array": {

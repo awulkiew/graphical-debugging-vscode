@@ -274,19 +274,20 @@ export class Values extends ContainerLoader {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        let ys: number[] = [];
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
         const elEval = await dbg.evaluate(elStr);
         if (elEval === undefined || elEval.type === undefined)
             return undefined;
+        let ys: number[] = [];
         let v = new Variable(elStr, elEval.type);
         for await (let elStr of this._container.elements(dbg, variable)) {
             v.name = elStr;
             const n = await this._value.load(dbg, v);
-            if (n !== undefined)
-                ys.push(n);
+            if (n === undefined)
+                return undefined
+            ys.push(n);
         }
         return new draw.Plot(undefined, ys);
     }
@@ -297,14 +298,14 @@ export class Points extends ContainerLoader {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        let xs: number[] = [];
-        let ys: number[] = [];
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
         const elEval = await dbg.evaluate(elStr);
         if (elEval === undefined || elEval.type === undefined)
             return undefined;
+        let xs: number[] = [];
+        let ys: number[] = [];
         let v = new Variable(elStr, elEval.type);
         for await (let elStr of this._container.elements(dbg, variable)) {
             v.name = elStr;
@@ -323,7 +324,24 @@ export class Geometries extends ContainerLoader {
     constructor(private _container: Container, private _geometry: Geometry) {
         super();
     }
-    // TODO
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const elStr = this._container.element(variable);
+        if (elStr === undefined)
+            return undefined;
+        const elEval = await dbg.evaluate(elStr);
+        if (elEval === undefined || elEval.type === undefined)
+            return undefined;
+        let drawables: draw.Drawable[] = [];
+        let v = new Variable(elStr, elEval.type);
+        for await (let elStr of this._container.elements(dbg, variable)) {
+            v.name = elStr;
+            const d = await this._geometry.load(dbg, v);
+            if (d === undefined)
+                return undefined;
+            drawables.push(d);
+        }
+        return new draw.Drawables(drawables);
+    }
 }
 
 // Geometric primitives
@@ -379,6 +397,38 @@ export class Ring extends Geometry {
             return new draw.Ring(plot.xs, plot.ys);
         else
             return undefined;
+    }
+}
+
+export class Polygon extends Geometry {
+    constructor(
+        private _exteriorExpr: EvaluatedExpression,
+        private _exteriorRing: Ring,
+        private _interiorExpr: EvaluatedExpression | undefined,
+        private _interiorRings: Geometries | undefined) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const extStr = this._exteriorExpr.expression.toString(variable);
+        const extVar = new Variable(extStr, this._exteriorExpr.type);
+        const extRing = await this._exteriorRing.load(dbg, extVar);
+        if (!(extRing instanceof draw.Ring))
+            return undefined;
+        let rings: draw.Ring[] = [];
+        if (this._interiorExpr && this._interiorRings) {
+            const intStr = this._interiorExpr.expression.toString(variable);
+            const intVar = new Variable(intStr, this._interiorExpr.type);
+            const intRings = await this._interiorRings.load(dbg, intVar);
+            if (!(intRings instanceof draw.Drawables))
+                return undefined;
+            // Would it be possible to case drawables to Ring[]?
+            for (let d of intRings.drawables) {
+                if (!(d instanceof draw.Ring))
+                    return undefined;
+                rings.push(d as draw.Ring);
+            }
+        }
+        return new draw.Polygon(extRing, rings);
     }
 }
 
@@ -445,6 +495,31 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                                         return new Ring(contExpr, pointsLoad);
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+                else if (entry.kind === 'polygon') {
+                    if (entry.exteriorring && entry.exteriorring.name) {
+                        const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
+                        if (extEval) {
+                            // TODO: only search for Ring
+                            const extLoad = await getLoader(dbg, extEval.variable);
+                            if (extLoad instanceof Ring) {
+                                // Optional interiorRings
+                                let intEval: EvaluatedExpression | undefined = undefined;
+                                let intLoad: Geometries | undefined = undefined;
+                                if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
+                                    intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
+                                    if (intEval) {
+                                        // TODO only search for Geometries
+                                        let loader = await getLoader(dbg, intEval.variable);
+                                        if (loader instanceof Geometries) {
+                                            intLoad = loader as Geometries;
+                                        }
+                                    }
+                                }
+                                return new Polygon(extEval, extLoad, intEval, intLoad);
                             }
                         }
                     }

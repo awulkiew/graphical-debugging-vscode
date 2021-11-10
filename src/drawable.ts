@@ -1,14 +1,14 @@
-export class DrawableData {
+export class PlotlyData {
     constructor(
-        public trace: any,
-        public shape: any,
+        public traces: any[],
+        public shapes: any[],
         public colorId: number)
     {}
 }
 
 export class Drawable {
-    toData(colorId: number): DrawableData {
-        return new DrawableData(undefined, undefined, colorId);
+    toPlotly(colorId: number): PlotlyData {
+        return new PlotlyData([], [], colorId);
     }
 };
 
@@ -18,21 +18,37 @@ export class Plot extends Drawable {
         public readonly ys: number[]) {
         super();
     }
-    toData(colorId: number): any {
-        let trace: any = undefined;
+    toPlotly(colorId: number): PlotlyData {
+        let result = new PlotlyData([], [], colorId);
         if (this.ys.length > 0) {
-            trace = {
+            result.traces = [{
                 x: this.xs === undefined ? Array.from(Array(this.ys.length).keys()) : this.xs,
                 y: this.ys,
                 type: "scatter",
                 mode: "lines+markers",
                 hoverinfo: "x+y",
                 line: { color: "#888" }
-            };
+            }];
         }
-        return new DrawableData(trace, undefined, colorId);
+        return result;
     }
 };
+
+export class Drawables extends Drawable {
+    constructor(public readonly drawables: Drawable[]) {
+        super();
+    }
+    toPlotly(colorId: number): PlotlyData {
+        let result = new PlotlyData([], [], colorId);
+        for (let drawable of this.drawables) {
+            const data = drawable.toPlotly(colorId);
+            result.traces.push(data.traces);
+            result.shapes.push(data.shapes);
+        }
+        return result;
+    }
+};
+
 
 export class Geometry extends Drawable {
 }
@@ -43,7 +59,7 @@ export class Point extends Geometry {
         public readonly y: number) {
         super();
     }
-    toData(colorId: number): any {
+    toPlotly(colorId: number): PlotlyData {
         let trace = {
             x: [this.x],
             y: [this.y],
@@ -52,7 +68,7 @@ export class Point extends Geometry {
             hoverinfo: "x+y",
             line: { color: "#888" }
         };
-        return new DrawableData(trace, undefined, colorId);
+        return new PlotlyData([trace], [], colorId);
     }
 }
 
@@ -62,9 +78,8 @@ export class Ring extends Drawable {
         public readonly ys: number[]) {
         super();
     }
-    toData(colorId: number): any {
-        let trace: any = undefined;
-        let shape: any = undefined;
+    toPlotly(colorId: number): PlotlyData {
+        let result = new PlotlyData([], [], colorId);
         const length = Math.min(this.xs.length, this.ys.length);
         if (length > 0) {
             let path: string = 'M' + this.xs[0] + ',' + this.ys[0] + ' ';
@@ -72,21 +87,42 @@ export class Ring extends Drawable {
                 path += 'L' + this.xs[i] + ',' + this.ys[i] + ' ';
             }
             path += 'Z';
-            trace = {
+            result.traces = [{
                 x: this.xs,
                 y: this.ys,
                 type: "scatter",
                 mode: "markers",
                 hoverinfo: "x+y",
                 line: { color: "#888" }
-            };
-            shape = {
+            }];
+            result.shapes = [{
                 path: path,
                 type: "path",
                 fillcolor: "#888",
                 line: { color: "888" }
-            };
+            }];
         }
-        return new DrawableData(trace, shape, colorId);
+        return result;
+    }
+};
+
+export class Polygon extends Drawable {
+    constructor(
+        public readonly exteriorRing: Ring,
+        public readonly interiorRings: Ring[]) {
+        super();
+    }
+    toPlotly(colorId: number): PlotlyData {
+        let result = this.exteriorRing.toPlotly(colorId);
+        for (let interiorRing of this.interiorRings) {
+            const d = interiorRing.toPlotly(colorId);
+            // The result may contain multiple traces and one shape
+            result.traces.push(d.traces);
+            if (result.shapes.length < 1)
+                result.shapes = d.shapes;
+            else if (d.shapes.length > 0)
+                result.shapes[0].path += ' ' + d.shapes[0].path;
+        }
+        return result;
     }
 };
