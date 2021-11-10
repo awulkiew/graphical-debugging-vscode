@@ -42,8 +42,10 @@ export class Drawables extends Drawable {
         let result = new PlotlyData([], [], colorId);
         for (let drawable of this.drawables) {
             const data = drawable.toPlotly(colorId);
-            result.traces.push(data.traces);
-            result.shapes.push(data.shapes);
+            for (const trace of data.traces)
+                result.traces.push(trace);
+            for (const shape of data.shapes)
+                result.shapes.push(shape);
         }
         return result;
     }
@@ -117,7 +119,8 @@ export class Polygon extends Drawable {
         for (let interiorRing of this.interiorRings) {
             const d = interiorRing.toPlotly(colorId);
             // The result may contain multiple traces and one shape
-            result.traces.push(d.traces);
+            for (const trace of d.traces)
+                result.traces.push(trace);
             if (result.shapes.length < 1)
                 result.shapes = d.shapes;
             else if (d.shapes.length > 0)
