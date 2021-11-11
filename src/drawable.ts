@@ -116,7 +116,7 @@ export class Ring extends Drawable {
 export class Polygon extends Drawable {
     constructor(
         public readonly exteriorRing: Ring,
-        public readonly interiorRings: Ring[]) {
+        public readonly interiorRings: Ring[] = []) {
         super();
     }
     toPlotly(colorId: number): PlotlyData {

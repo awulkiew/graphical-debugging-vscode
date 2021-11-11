@@ -351,17 +351,17 @@ export class Geometry extends Loader {
 }
 
 export class Point extends Geometry {
-    constructor(x: Expression, y: Expression) {
+    constructor(
+        private _xEval: EvaluatedExpression,
+        private _yEval: EvaluatedExpression) {
         super();
-        this._x = x;
-        this._y = y;
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        const xStr = this._x.toString(variable);
+        const xStr = this._xEval.expression.toString(variable);
         const xe = await dbg.evaluate(xStr);
         if (xe === undefined || xe.type === undefined)
             return undefined
-        const yStr = this._y.toString(variable);
+        const yStr = this._yEval.expression.toString(variable);
         const ye = await dbg.evaluate(yStr);
         if (ye === undefined || ye.type === undefined)
             return undefined
@@ -369,20 +369,24 @@ export class Point extends Geometry {
         const y = parseFloat(ye.result);
         return new draw.Point(x, y);
     }
-
-    private _x: Expression;
-    private _y: Expression;
 }
 
 export class Linestring extends Geometry {
-    constructor(private _containerExpr: EvaluatedExpression, private _points: Points) {
+    constructor(private _containerExpr: EvaluatedExpression) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const contStr = this._containerExpr.expression.toString(variable);
         const contVar = new Variable(contStr, this._containerExpr.type);
-        return this._points.load(dbg, contVar);
+        // TODO: only search for Container of Points 
+        if (this._pointsLoad === undefined) {
+            const loader = await getLoader(dbg, contVar);
+            if (loader instanceof Points)
+                this._pointsLoad = loader as Points;
+        }
+        return this._pointsLoad?.load(dbg, contVar);
     }
+    private _pointsLoad: Points | undefined = undefined;
 }
 
 export class Ring extends Geometry {
@@ -416,34 +420,61 @@ export class MultiPoint extends Geometry {
 
 export class Polygon extends Geometry {
     constructor(
-        private _exteriorExpr: EvaluatedExpression,
-        private _exteriorRing: Ring,
-        private _interiorExpr: EvaluatedExpression | undefined,
-        private _interiorRings: Geometries | undefined) {
+        private _extEval: EvaluatedExpression,
+        private _intEval: EvaluatedExpression | undefined) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        const extStr = this._exteriorExpr.expression.toString(variable);
-        const extVar = new Variable(extStr, this._exteriorExpr.type);
-        const extRing = await this._exteriorRing.load(dbg, extVar);
+        const extStr = this._extEval.expression.toString(variable);
+        const extVar = new Variable(extStr, this._extEval.type);
+        if (this._extLoad === undefined) {
+            // TODO: only search for Ring
+            const loader = await getLoader(dbg, extVar);
+            if (loader instanceof Ring)
+                this._extLoad = loader;
+        }
+        if (this._extLoad === undefined)
+            return undefined;
+        const extRing = await this._extLoad.load(dbg, extVar);
         if (!(extRing instanceof draw.Ring))
             return undefined;
+        if (this._intEval === undefined)
+            return new draw.Polygon(extRing)
+        // TODO: Get Container loader and check the size here to avoid
+        //       accessing element of empty container.
+        const intStr = this._intEval.expression.toString(variable);
+        const intVar = new Variable(intStr, this._intEval.type);
+        if (this._intLoad === undefined) {
+            // TODO: only search for Geometries or containers of Ring
+            const loader = await getLoader(dbg, intVar);
+            if (loader instanceof Geometries)
+                this._intLoad = loader;
+        }
+        if (this._intLoad === undefined) {
+            // TEMP: Possible reason for this is that Container is returned
+            //       instead of Geometries above if size of Container is 0
+            //       and it is not possible to access the first element to get
+            //       the loader for elements.
+            //       So for now instead of returning undefined here assume this is
+            //       the case and return only the exterior ring.
+            return new draw.Polygon(extRing);
+            //return undefined;
+        }
+        const intRings = await this._intLoad.load(dbg, intVar);
+        if (!(intRings instanceof draw.Drawables))
+            return undefined;
+        // Would it be possible to cast drawables to Ring[] instead of creating new array?
         let rings: draw.Ring[] = [];
-        if (this._interiorExpr && this._interiorRings) {
-            const intStr = this._interiorExpr.expression.toString(variable);
-            const intVar = new Variable(intStr, this._interiorExpr.type);
-            const intRings = await this._interiorRings.load(dbg, intVar);
-            if (!(intRings instanceof draw.Drawables))
+        for (let d of intRings.drawables) {
+            if (!(d instanceof draw.Ring))
                 return undefined;
-            // Would it be possible to case drawables to Ring[]?
-            for (let d of intRings.drawables) {
-                if (!(d instanceof draw.Ring))
-                    return undefined;
-                rings.push(d as draw.Ring);
-            }
+            rings.push(d as draw.Ring);
         }
         return new draw.Polygon(extRing, rings);
     }
+
+    private _extLoad: Ring | undefined = undefined;
+    private _intLoad: Geometries | undefined = undefined;
 }
 
 // Return Container or Loader for Variable based on JSON definitions
@@ -472,10 +503,10 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                 }
                 else if (entry.kind === 'point') {
                     if (entry.coordinates && entry.coordinates.x && entry.coordinates.y) {
-                        const x = await evaluateExpression(dbg, variable, entry.coordinates.x);
-                        const y = await evaluateExpression(dbg, variable, entry.coordinates.y);
-                        if (x && y) {
-                            return new Point(x.expression, y.expression);
+                        const xEval = await evaluateExpression(dbg, variable, entry.coordinates.x);
+                        const yEval = await evaluateExpression(dbg, variable, entry.coordinates.y);
+                        if (xEval && yEval) {
+                            return new Point(xEval, yEval);
                         }
                     }
                 }
@@ -488,7 +519,7 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                             const pointsLoad = await getLoader(dbg, contVar);
                             if (pointsLoad instanceof Points) {
                                 if (entry.kind === 'linestring')
-                                    return new Linestring(contExpr, pointsLoad);
+                                    return new Linestring(contExpr);
                                 else if (entry.kind === 'ring')
                                     return new Ring(contExpr, pointsLoad);
                                 else
@@ -501,24 +532,11 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                     if (entry.exteriorring && entry.exteriorring.name) {
                         const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
                         if (extEval) {
-                            // TODO: only search for Ring
-                            const extLoad = await getLoader(dbg, extEval.variable);
-                            if (extLoad instanceof Ring) {
-                                // Optional interiorRings
-                                let intEval: EvaluatedExpression | undefined = undefined;
-                                let intLoad: Geometries | undefined = undefined;
-                                if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
-                                    intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
-                                    if (intEval) {
-                                        // TODO only search for Geometries
-                                        let loader = await getLoader(dbg, intEval.variable);
-                                        if (loader instanceof Geometries) {
-                                            intLoad = loader as Geometries;
-                                        }
-                                    }
-                                }
-                                return new Polygon(extEval, extLoad, intEval, intLoad);
+                            let intEval = undefined;
+                            if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
+                                intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
                             }
+                            return new Polygon(extEval, intEval);
                         }
                     }
                 }
