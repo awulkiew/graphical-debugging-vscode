@@ -26,15 +26,31 @@ export class Webview {
 				},
 				null,
 				this._context.subscriptions);
+				
+			let initialized = false;
+			this._panel.webview.onDidReceiveMessage(
+				(e: any) => {
+					if (e.initialized && ! initialized) {
+						initialized = true;
+						this._panel?.webview.postMessage(data);
+					}
+				},
+				undefined,
+				this._context.subscriptions
+			);
+
 			const plotlyPath = vscode.Uri.file(
 				path.join(this._context.extensionPath, 'resources', 'plotly-2.4.2.min.js')
 			);
 			const plotlySrc = this._panel.webview.asWebviewUri(plotlyPath);
 			this._panel.webview.html = this.getWebviewContent(plotlySrc);
 
-			// Wait a while before sending message to newly created window.
+			// Failsafe
 			setTimeout(() => {
-				this._panel?.webview.postMessage(data);
+				if (! initialized) {
+					initialized = true;
+					this._panel?.webview.postMessage(data);
+				}
 			}, 1000);
 		}
 	}
@@ -96,6 +112,9 @@ export class Webview {
 								layout.shapes = event.data.shapes;
 							Plotly.newPlot(plot, event.data.traces, layout, config);
 						});
+
+						const vscode = acquireVsCodeApi();
+						vscode.postMessage({ initialized: true });
 					</script>
 				</body>
 			</html>`;
