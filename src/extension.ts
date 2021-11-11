@@ -36,23 +36,27 @@ function prepareMessage(drawableData: draw.PlotlyData[], colorTheme: vscode.Colo
 		shapes: [] as any,
 	};
 	if (colorTheme.kind === vscode.ColorThemeKind.Light) {
-		message.color = '#111';
-		message.gridcolor = '#777';
+		message.color = '#555';
+		message.gridcolor = '#aaa';
 		message.activecolor = '#aaa';
 	} else { // Dark or HighContrast
-		message.color = '#eee';
-		message.gridcolor = '#888';
+		message.color = '#aaa';
+		message.gridcolor = '#555';
 		message.activecolor = '#bbb';
 	}
 	const themeColors = colorTheme.kind === vscode.ColorThemeKind.Light ? colors.light : colors.dark;
 	for (let d of drawableData) {
 		const colorStr = d.colorId >= 0 ? themeColors.colors[d.colorId] : themeColors.color;
 		for (let trace of d.traces) {
-			trace.line.color = colorStr + 'CC';
+			if (trace.type === "bar")
+				trace.marker = {color: colorStr + '88'};
+			else
+				trace.line = {color: colorStr + 'CC'};
+			trace.hoverinfo = "x+y";
 			message.traces.push(trace);
 		}
 		for (let shape of d.shapes) {
-			shape.line.color = colorStr + 'CC';
+			shape.line = {color: colorStr + 'CC'};
 			shape.fillcolor = colorStr + '55';
 			message.shapes.push(shape);
 		}

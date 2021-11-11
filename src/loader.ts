@@ -400,6 +400,20 @@ export class Ring extends Geometry {
     }
 }
 
+export class MultiPoint extends Geometry {
+    constructor(private _containerExpr: EvaluatedExpression, private _points: Points) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const contStr = this._containerExpr.expression.toString(variable);
+        const contVar = new Variable(contStr, this._containerExpr.type);
+        let plot = await this._points.load(dbg, contVar);
+        if (plot instanceof draw.Plot)
+            plot.plotStyle = draw.PlotStyle.Markers;
+        return plot;
+    }
+}
+
 export class Polygon extends Geometry {
     constructor(
         private _exteriorExpr: EvaluatedExpression,
@@ -465,36 +479,20 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                         }
                     }
                 }
-                else if (entry.kind === 'linestring') {
-                    if (entry.points) {
-                        if (entry.points.container) {
-                            if (entry.points.container.name) {
-                                const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
-                                if (contExpr) {
-                                    const contVar = contExpr.variable;
-                                    // TODO: only search for Container of Points 
-                                    const pointsLoad = await getLoader(dbg, contVar);
-                                    if (pointsLoad instanceof Points) {
-                                        return new Linestring(contExpr, pointsLoad);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else if (entry.kind === 'ring') {
-                    if (entry.points) {
-                        if (entry.points.container) {
-                            if (entry.points.container.name) {
-                                const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
-                                if (contExpr) {
-                                    const contVar = contExpr.variable;
-                                    // TODO: only search for Container of Points 
-                                    const pointsLoad = await getLoader(dbg, contVar);
-                                    if (pointsLoad instanceof Points) {
-                                        return new Ring(contExpr, pointsLoad);
-                                    }
-                                }
+                else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
+                    if (entry.points && entry.points.container && entry.points.container.name) {
+                        const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
+                        if (contExpr) {
+                            const contVar = contExpr.variable;
+                            // TODO: only search for Container of Points 
+                            const pointsLoad = await getLoader(dbg, contVar);
+                            if (pointsLoad instanceof Points) {
+                                if (entry.kind === 'linestring')
+                                    return new Linestring(contExpr, pointsLoad);
+                                else if (entry.kind === 'ring')
+                                    return new Ring(contExpr, pointsLoad);
+                                else
+                                    return new MultiPoint(contExpr, pointsLoad);
                             }
                         }
                     }
@@ -521,6 +519,26 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                                 }
                                 return new Polygon(extEval, extLoad, intEval, intLoad);
                             }
+                        }
+                    }
+                }
+                else if (entry.kind === 'multilinestring') {
+                    if (entry.linestrings && entry.linestrings.container && entry.linestrings.container.name) {
+                        const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name);
+                        if (contExpr) {
+                            const contVar = contExpr.variable;
+                            // TODO: only search for Container of Linestrings
+                            return await getLoader(dbg, contVar);
+                        }
+                    }
+                }
+                else if (entry.kind === 'multipolygon') {
+                    if (entry.polygons && entry.polygons.container && entry.polygons.container.name) {
+                        const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name);
+                        if (contExpr) {
+                            const contVar = contExpr.variable;
+                            // TODO: only search for Container of Polygons
+                            return await getLoader(dbg, contVar);
                         }
                     }
                 }

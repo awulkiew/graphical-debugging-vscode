@@ -12,23 +12,34 @@ export class Drawable {
     }
 };
 
+export enum PlotStyle { LinesAndMarkers, Lines, Markers, Bars };
+
 export class Plot extends Drawable {
     constructor(
         public readonly xs: number[] | undefined,
-        public readonly ys: number[]) {
+        public readonly ys: number[],
+        public plotStyle: PlotStyle = PlotStyle.LinesAndMarkers) {
         super();
     }
     toPlotly(colorId: number): PlotlyData {
         let result = new PlotlyData([], [], colorId);
         if (this.ys.length > 0) {
-            result.traces = [{
+            let trace: any = {
                 x: this.xs === undefined ? Array.from(Array(this.ys.length).keys()) : this.xs,
-                y: this.ys,
-                type: "scatter",
-                mode: "lines+markers",
-                hoverinfo: "x+y",
-                line: { color: "#888" }
-            }];
+                y: this.ys
+            };
+            if (this.plotStyle === PlotStyle.Bars)
+                trace.type = "bar";
+            else {
+                trace.type = "scatter";
+                if (this.plotStyle === PlotStyle.Lines)
+                    trace.mode = "lines";
+                else if (this.plotStyle === PlotStyle.Markers)
+                    trace.mode = "markers";
+                else
+                    trace.mode = "lines+markers";
+            }
+            result.traces = [trace];
         }
         return result;
     }
@@ -66,9 +77,7 @@ export class Point extends Geometry {
             x: [this.x],
             y: [this.y],
             type: "scatter",
-            mode: "markers",
-            hoverinfo: "x+y",
-            line: { color: "#888" }
+            mode: "markers"
         };
         return new PlotlyData([trace], [], colorId);
     }
@@ -93,15 +102,11 @@ export class Ring extends Drawable {
                 x: this.xs,
                 y: this.ys,
                 type: "scatter",
-                mode: "markers",
-                hoverinfo: "x+y",
-                line: { color: "#888" }
+                mode: "markers"
             }];
             result.shapes = [{
                 path: path,
-                type: "path",
-                fillcolor: "#888",
-                line: { color: "888" }
+                type: "path"
             }];
         }
         return result;
