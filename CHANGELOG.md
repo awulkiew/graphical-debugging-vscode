@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.0]
+### Added
 - Visualization of Boost.Units quantity
 - Visualization of Boost.Geometry `ring` and `polygon`
 - Visualization of containers of geometries
