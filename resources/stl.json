@@ -1,0 +1,77 @@
+{
+    "name": "graphicaldebugging",
+    "language": "cpp",
+    "types": [
+        {
+            "type": "[a-zA-Z_][\\w<,>:\\s]*\\[\\d+\\]",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$N0"
+            },
+            "_comment": "C array"
+        },
+        {
+            "type": "std::pair<.+>",
+            "kind": "point",
+            "coordinates": {
+                "x": "$this.first",
+                "y": "$this.second"
+            }
+        },
+        {
+            "type": "std::array<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this._Elems",
+                "size": "$T1"
+            },
+            "_comment": "msvc"
+        },
+        {
+            "type": "std::vector<.+>",
+            "kind": "container",
+            "darray": {
+                "start": "$this._Mypair._Myval2._Myfirst",
+                "finish": "$this._Mypair._Myval2._Mylast"
+            },
+            "_comment": "msvc"
+        },
+        {
+            "type": "std::array<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this._M_instance",
+                "size": "$T1"
+            },
+            "_comment": "gcc/libstdc++"
+        },
+        {
+            "type": "std::vector<.+>",
+            "kind": "container",
+            "darray": {
+                "start": "$this._M_impl._M_start",
+                "finish": "$this._M_impl._M_finish"
+            },
+            "_comment": "gcc/libstdc++"
+        },
+        {
+            "type": "std::array<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this.__elems_",
+                "size": "$T1"
+            },
+            "_comment": "llvm/libc++"
+        },
+        {
+            "type": "std::vector<.+>",
+            "kind": "container",
+            "darray": {
+                "start": "$this.__begin_",
+                "finish": "$this.__end_"
+            },
+            "_comment": "llvm/libc++"
+        }
+    ]
+}

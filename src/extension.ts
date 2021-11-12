@@ -64,7 +64,6 @@ function prepareMessage(drawableData: draw.PlotlyData[], colorTheme: vscode.Colo
 	return message;
 }
 
-
 export function activate(context: vscode.ExtensionContext) {
 	
 	const debugHelper: Debugger = new Debugger(context);

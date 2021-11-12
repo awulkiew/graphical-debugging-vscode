@@ -1,0 +1,140 @@
+{
+    "name": "graphicaldebugging",
+    "language": "cpp",
+    "types": [
+        {
+            "type": "boost::array<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this.elems",
+                "size": "$T1"
+            }
+        },
+        {
+            "type": "boost::geometry::model::point<.+>",
+            "kind": "point",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d2::point_xy<.+>",
+            "kind": "point",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d3::point_xyz<.+>",
+            "kind": "point",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::linestring<.+>",
+            "kind": "linestring",
+            "points": {
+                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::linestring<.+>",
+            "kind": "linestring",
+            "points": {
+                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::ring<.+>",
+            "kind": "ring",
+            "points": {
+                "container": { "name": "*($T3<$T0,$T4<$T0 > >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::ring<.+>",
+            "kind": "ring",
+            "points": {
+                "container": { "name": "*($T3<$T0,$T4<$T0> >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::polygon<.+>",
+            "kind": "polygon",
+            "exteriorring": { "name": "$this.m_outer" },
+            "interiorrings": {
+                "container": { "name": "$this.m_inners" }
+            },
+            "_comment": "This doesn't work with GDB right now because the types of members are typedefs"
+        },
+        {
+            "type": "boost::geometry::model::multi_point<.+>",
+            "kind": "multipoint",
+            "points": {
+                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::multi_point<.+>",
+            "kind": "multipoint",
+            "points": {
+                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::multi_linestring<.+>",
+            "kind": "multilinestring",
+            "linestrings": {
+                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::multi_linestring<.+>",
+            "kind": "multilinestring",
+            "linestrings": {
+                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::multi_polygon<.+>",
+            "kind": "multipolygon",
+            "polygons": {
+                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::model::multi_polygon<.+>",
+            "kind": "multipolygon",
+            "polygons": {
+                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
+            },
+            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+        },
+        {
+            "type": "boost::geometry::index::detail::varray<.+>",
+            "kind": "container",
+            "array": {
+                "start": "($T0*)$this.m_storage.data_.buf",
+                "size": "$this.m_size"
+            }
+        },
+        {
+            "type": "boost::units::quantity<.+>",
+            "kind": "value",
+            "name": "$this.val_"
+        }
+    ]
+}

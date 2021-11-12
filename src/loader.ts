@@ -1,7 +1,7 @@
 import * as debug from './debugger';
-import * as cpp from './cpp.json';
 import * as draw from './drawable'
-import { InlineValueEvaluatableExpression } from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 
 function parseTParams(type: string, beg: string = '<', end: string = '>', sep: string = ',') : string[] {
     let result: string[] = [];
@@ -477,11 +477,68 @@ export class Polygon extends Geometry {
     private _intLoad: Geometries | undefined = undefined;
 }
 
+let languages = new Map<debug.Language, any[]>();
+
+function parseFiles(directoryPath: string) {
+    let result = [];
+    const fileNames: string[] = fs.readdirSync(directoryPath);
+    for (const fileName of fileNames) {
+        if (fileName.endsWith('.json')) {
+            const p = path.join(directoryPath, fileName);
+            const f = fs.readFileSync(p, 'utf-8');
+            const o = JSON.parse(f);
+            if (o.name === 'graphicaldebugging') {
+                result.push(o);
+            }
+        }
+    }
+    return result;
+}
+
+function stringToLanguage(name: string | undefined): debug.Language | undefined {
+    switch(name){
+        case 'cpp': return debug.Language.Cpp;
+        case 'java': return debug.Language.Java;
+        case 'javascript': return debug.Language.JavaScript;
+        case 'python': return debug.Language.Python;
+        default: return undefined;
+    }
+}
+
+function parseLanguages(directory: string): Map<debug.Language, any[]> {
+    let languages = new Map<debug.Language, any[]>();
+    const defs = parseFiles(directory);
+    for (const def of defs) {
+        const lang = stringToLanguage(def.language);
+        if (lang === undefined)
+            continue;
+        if (! languages.has(lang))
+            languages.set(lang, []);
+        let val = languages.get(lang);
+        if (val && def.types) {
+            for (const t of def.types)
+                val.push(t);
+        }
+    }
+    return languages;
+}
+
 // Return Container or Loader for Variable based on JSON definitions
 export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Container | Value | Loader | undefined> {
-    const language: debug.Language | undefined = dbg.language();
-    if (language === debug.Language.Cpp) {
-        for (let entry of cpp) {
+    // TODO: for now load once
+    //   in the future check modification time, esspecially for user-defined types    
+    if (languages.size < 1) {
+        const p = path.join(__filename, '..', '..', 'resources');
+        languages = parseLanguages(p);
+    }
+
+    const lang: debug.Language | undefined = dbg.language();
+    if (lang === undefined)
+        return undefined;
+
+    const types: any[] | undefined = languages.get(lang);
+    if (types) {
+        for (let entry of types) {
             if (variable.type.match('^' + entry.type + '$')) {
                 if (entry.kind === 'container') {
                     const container: Container | undefined = await getContainer(dbg, variable, entry);
