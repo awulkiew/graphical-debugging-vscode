@@ -29,4 +29,4 @@ This extension allows to display graphical representation of variables during de
 
 ##### Known issues
 
-The extension doesn't work for variables defined with `typedef` with GDB. This issue is known and also affects the use natvis files: https://github.com/microsoft/vscode-cpptools/issues/3038 . If this proposal was implemented it could potentially allow to work around this issue: https://github.com/microsoft/MIEngine/issues/1236 .
+The extension doesn't work for variables defined with `typedef` with GDB. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use natvis files. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue.
