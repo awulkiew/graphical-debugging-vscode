@@ -22,4 +22,13 @@ This extension allows to display graphical representation of variables during de
   * Boost.Units: `quantity`   
 * 2D cartesian geometries
   * STL: `pair`
-  * Boost.Geometry: `point`, `linestring`, `ring`, `polygon`
+  * Boost.Geometry: `point`, `point_xy`, `point_xyz`, `linestring`, `ring`, `polygon`, `multi_point`, `multi_linestring`, `multi_polygon`
+* User-defined types
+  * see `*.json` files in `resources` directory
+  * the directory containing user files can be defined in settings, by default it is the workspace directory of currently debugged program
+
+##### Known issues
+
+The extension doesn't work for variables defined with `typedef` with GDB.
+This issue is known and also affects the use natvis files: https://github.com/microsoft/vscode-cpptools/issues/3038
+If this proposal was implemented it could potentially allow to work around this issue: https://github.com/microsoft/MIEngine/issues/1236

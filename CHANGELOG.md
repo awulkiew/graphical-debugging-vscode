@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Visualization of Boost.Geometry `ring` and `polygon`
 - Visualization of containers of geometries
 - Visualization of Boost.Geometry `point_xy`, `point_xyz`, `multi_point`, `multi_linestring` and `multi_polygon`
+- User-defined types
 
 ## [0.1.0]
 ### Added
