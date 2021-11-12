@@ -97,6 +97,16 @@
 					"group": "inline"
 				}
 			]
+		},
+		"configuration": {
+			"title": "Graphical Debugging",
+			"properties": {
+				"graphicalDebugging.additionalTypesDirectory": {
+					"type": "string",
+					"default": ".",
+					"description": "The directory containing JSON files containing additional type definitions. Directory starting with `.` is relative to workspace."
+				}
+			}
 		}
 	},
 	"dependencies": {

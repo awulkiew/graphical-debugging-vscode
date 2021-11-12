@@ -124,6 +124,12 @@ export class Debugger {
             return undefined;
     }
 
+    workspaceFolder(): string | undefined {
+        if (this.sessionInfo === undefined)
+            return undefined;
+        return this.sessionInfo.session.workspaceFolder?.uri.fsPath;
+    }
+
     async machineInfo() {
         if (this.sessionInfo === undefined)
             return undefined;
