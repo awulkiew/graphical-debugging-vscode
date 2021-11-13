@@ -166,6 +166,9 @@ export class Container {
     element(variable: Variable): string | undefined {
         return undefined;
     }
+    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
+        return 0;
+    }
     async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {}
 }
 
@@ -173,7 +176,7 @@ export class RandomAccessContainer extends Container {}
 
 export class ContiguousContainer extends RandomAccessContainer {}
 
-export class Array extends RandomAccessContainer
+export class Array extends ContiguousContainer
 {
     constructor(private _start: Expression, private _size: Expression) {
         super();
@@ -183,13 +186,17 @@ export class Array extends RandomAccessContainer
         return '(' + this._start.toString(variable) + ')[0]';
     }
 
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
+    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = this._size.toString(variable);
         // TODO: Check if it's possible to parse size at this point
         const sizeExpr = await dbg.evaluate(sizeStr);
         if (sizeExpr === undefined || sizeExpr.type === undefined)
-            return;
-        const size = parseInt(sizeExpr.result);
+            return 0;
+        return parseInt(sizeExpr.result);
+    }
+
+    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
+        const size = await this.size(dbg, variable);
         if (! (size > 0)) // also handle NaN
             return;
         // NOTE: This loop could be done asynchroniously with await Promise.all()
@@ -212,14 +219,18 @@ export class DArray extends RandomAccessContainer {
         return '(' + this._start.toString(variable) + ')[0]';
     }
 
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
+    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = '(' + this._finish.toString(variable) + ')-(' + this._start.toString(variable) + ')';
         const sizeExpr = await dbg.evaluate(sizeStr);
         if (sizeExpr === undefined || sizeExpr.type === undefined)
-            return undefined;
-        const size = parseInt(sizeExpr.result);
+            return 0;
+        return parseInt(sizeExpr.result);
+    }
+
+    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
+        const size = await this.size(dbg, variable);
         if (! (size > 0)) // also handle NaN
-            return undefined;
+            return;
         for (let i = 0; i < size; ++i) {
             const elStr = '(' + this._start.toString(variable) + ')[' + i.toString() + ']';
             yield elStr;
@@ -372,15 +383,15 @@ export class Point extends Geometry {
     }
 }
 
-export class Linestring extends Geometry {
+export class PointsRange extends Geometry {
     constructor(private _containerExpr: EvaluatedExpression) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const contStr = this._containerExpr.expression.toString(variable);
         const contVar = new Variable(contStr, this._containerExpr.type);
-        // TODO: only search for Container of Points 
         if (this._pointsLoad === undefined) {
+            // TODO: only search for Container of Points 
             const loader = await getLoader(dbg, contVar);
             if (loader instanceof Points)
                 this._pointsLoad = loader as Points;
@@ -390,14 +401,18 @@ export class Linestring extends Geometry {
     private _pointsLoad: Points | undefined = undefined;
 }
 
-export class Ring extends Geometry {
-    constructor(private _containerExpr: EvaluatedExpression, private _points: Points) {
-        super();
+export class Linestring extends PointsRange {
+    constructor(containerExpr: EvaluatedExpression) {
+        super(containerExpr);
+    }
+}
+
+export class Ring extends PointsRange {
+    constructor(containerExpr: EvaluatedExpression) {
+        super(containerExpr);
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        const contStr = this._containerExpr.expression.toString(variable);
-        const contVar = new Variable(contStr, this._containerExpr.type);
-        const plot = await this._points.load(dbg, contVar);
+        const plot = await super.load(dbg, variable);
         if (plot instanceof draw.Plot && plot.xs)
             return new draw.Ring(plot.xs, plot.ys);
         else
@@ -405,14 +420,12 @@ export class Ring extends Geometry {
     }
 }
 
-export class MultiPoint extends Geometry {
-    constructor(private _containerExpr: EvaluatedExpression, private _points: Points) {
-        super();
+export class MultiPoint extends PointsRange {
+    constructor(containerExpr: EvaluatedExpression) {
+        super(containerExpr);
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        const contStr = this._containerExpr.expression.toString(variable);
-        const contVar = new Variable(contStr, this._containerExpr.type);
-        let plot = await this._points.load(dbg, contVar);
+        const plot = await super.load(dbg, variable);
         if (plot instanceof draw.Plot)
             plot.plotStyle = draw.PlotStyle.Markers;
         return plot;
@@ -594,17 +607,12 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                         if (entry.points && entry.points.container && entry.points.container.name) {
                             const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
                             if (contExpr) {
-                                const contVar = contExpr.variable;
-                                // TODO: only search for Container of Points 
-                                const pointsLoad = await getLoader(dbg, contVar);
-                                if (pointsLoad instanceof Points) {
-                                    if (entry.kind === 'linestring')
-                                        return new Linestring(contExpr);
-                                    else if (entry.kind === 'ring')
-                                        return new Ring(contExpr, pointsLoad);
-                                    else
-                                        return new MultiPoint(contExpr, pointsLoad);
-                                }
+                                if (entry.kind === 'linestring')
+                                    return new Linestring(contExpr);
+                                else if (entry.kind === 'ring')
+                                    return new Ring(contExpr);
+                                else
+                                    return new MultiPoint(contExpr);
                             }
                         }
                     }

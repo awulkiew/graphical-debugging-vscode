@@ -22,6 +22,9 @@
 		"type": "git",
 		"url": "https://github.com/awulkiew/graphical-debugging-vscode"
 	},
+	"bugs": {
+		"url": "https://github.com/awulkiew/graphical-debugging-vscode/issues"
+	},
 	"homepage": "https://github.com/awulkiew/graphical-debugging-vscode/blob/master/README.md",
 
 	"main": "./out/extension.js",
