@@ -491,9 +491,6 @@ export class Polygon extends Geometry {
     private _intLoad: Geometries | undefined = undefined;
 }
 
-let languages = new Map<debug.Language, any[]>();
-let languagesUD = new Map<debug.Language, any[]>();
-
 function parseFiles(directoryPath: string) {
     let result = [];
     let fileNames: string[] = [];
@@ -541,18 +538,20 @@ function parseLanguages(directory: string): Map<debug.Language, any[]> {
     return languages;
 }
 
-// Return Container or Loader for Variable based on JSON definitions
-export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Container | Value | Loader | undefined> {
-    // TODO: for now load once
-    //   in the future check modification time, esspecially for user-defined types    
-    if (languages.size < 1) {
+let languages = new Map<debug.Language, any[]>();
+let languagesUD = new Map<debug.Language, any[]>();
+
+export function updateLoaders(dbg: debug.Debugger) {
+    // TODO: update only if needed, check modification time, esspecially for user-defined types
+    languages = new Map<debug.Language, any[]>();
+    languagesUD = new Map<debug.Language, any[]>();
+
+    {
         const p = path.join(__filename, '..', '..', 'resources');
         languages = parseLanguages(p);
     }
 
-    // TODO: This should be done only once after breakpoint is hit
-    //       Right now it's done each time getLoader() is called.
-    if (languagesUD.size < 1) {
+    {
         let dir = vscode.workspace.getConfiguration().get<string>('graphicalDebugging.additionalTypesDirectory');
         let p: string | undefined = undefined;
         if (dir?.startsWith('.')) {
@@ -565,7 +564,10 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
         if (p)
             languagesUD = parseLanguages(p);
     }
+}
 
+// Return Container or Loader for Variable based on JSON definitions
+export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Container | Value | Loader | undefined> {
     const lang: debug.Language | undefined = dbg.language();
     if (lang === undefined)
         return undefined;

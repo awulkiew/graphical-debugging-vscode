@@ -82,6 +82,9 @@ export function activate(context: vscode.ExtensionContext) {
 			console.log(machineInfo.endianness === Endianness.Little ? 'little endian' : 'big endian');
 		}
 
+		if (graphicalWatch.variables.length > 0)
+			load.updateLoaders(debugHelper);
+
 		drawableData = [];
 		for (let variable of graphicalWatch.variables) {
 			const d = await handleVariable(debugHelper, variable);
@@ -120,6 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
 			|| e.eventType === GraphicalWatchEventType.Edit) {
 			if (e.variable) {
 				if (debugHelper.isStopped()) {
+					load.updateLoaders(debugHelper);
 					const d = await handleVariable(debugHelper, e.variable);
 					if (e.eventType === GraphicalWatchEventType.Add) {
 						drawableData.push(d);
