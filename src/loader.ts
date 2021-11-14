@@ -491,80 +491,113 @@ export class Polygon extends Geometry {
     private _intLoad: Geometries | undefined = undefined;
 }
 
-function parseFiles(directoryPath: string) {
-    let result = [];
-    let fileNames: string[] = [];
-    try {
-        fileNames = fs.readdirSync(directoryPath);
-    } catch(err) {}
-    for (const fileName of fileNames) {
-        if (fileName.endsWith('.json')) {
-            const p = path.join(directoryPath, fileName);
-            const f = fs.readFileSync(p, 'utf-8');
-            const o = JSON.parse(f);
-            if (o.name === 'graphicaldebugging') {
-                result.push(o);
+export class Types {
+
+    *all(lang: debug.Language) {
+        for (const type of this._all(this._languages, lang))
+            yield type;
+        for (const type of this._all(this._languagesUD, lang))
+            yield type;
+    }
+
+    private *_all(languages: Map<debug.Language, Map<string, any[]>>, lang: debug.Language) {
+        if (lang === undefined)
+            return;
+        const kinds = languages.get(lang);
+        if (kinds === undefined)
+            return;
+        for (const types of kinds.values()) {
+            for (const type of types) {
+                yield type;
             }
         }
     }
-    return result;
-}
 
-function stringToLanguage(name: string | undefined): debug.Language | undefined {
-    switch(name){
-        case 'cpp': return debug.Language.Cpp;
-        case 'java': return debug.Language.Java;
-        case 'javascript': return debug.Language.JavaScript;
-        case 'python': return debug.Language.Python;
-        default: return undefined;
-    }
-}
+    update(dbg: debug.Debugger) {
+        // TODO: update only if needed, check modification time, esspecially for user-defined types
+        this._languages = new Map<debug.Language, Map<string, any[]>>();
+        this._languagesUD = new Map<debug.Language, Map<string, any[]>>();
 
-function parseLanguages(directory: string): Map<debug.Language, any[]> {
-    let languages = new Map<debug.Language, any[]>();
-    const defs = parseFiles(directory);
-    for (const def of defs) {
-        const lang = stringToLanguage(def.language);
-        if (lang === undefined)
-            continue;
-        if (! languages.has(lang))
-            languages.set(lang, []);
-        let val = languages.get(lang);
-        if (val && def.types) {
-            for (const t of def.types)
-                val.push(t);
+        {
+            const p = path.join(__filename, '..', '..', 'resources');
+            this._parseLanguages(this._languages, p);
+        }
+
+        {
+            let dir = vscode.workspace.getConfiguration().get<string>('graphicalDebugging.additionalTypesDirectory');
+            let p: string | undefined = undefined;
+            if (dir?.startsWith('.')) {
+                const workspaceDir = dbg.workspaceFolder();
+                if (workspaceDir)
+                    p = path.join(workspaceDir, dir);
+            }
+            else
+                p = dir;
+            if (p !== undefined)
+                this._parseLanguages(this._languagesUD, p);
         }
     }
-    return languages;
-}
 
-let languages = new Map<debug.Language, any[]>();
-let languagesUD = new Map<debug.Language, any[]>();
-
-export function updateLoaders(dbg: debug.Debugger) {
-    // TODO: update only if needed, check modification time, esspecially for user-defined types
-    languages = new Map<debug.Language, any[]>();
-    languagesUD = new Map<debug.Language, any[]>();
-
-    {
-        const p = path.join(__filename, '..', '..', 'resources');
-        languages = parseLanguages(p);
-    }
-
-    {
-        let dir = vscode.workspace.getConfiguration().get<string>('graphicalDebugging.additionalTypesDirectory');
-        let p: string | undefined = undefined;
-        if (dir?.startsWith('.')) {
-            const workspaceDir = dbg.workspaceFolder();
-            if (workspaceDir)
-                p = path.join(workspaceDir, dir);
+    private _parseLanguages(languages: Map<debug.Language, Map<string, any[]>>, directory: string) {
+        const files = this._parseFiles(directory);
+        for (const file of files) {
+            const lang = this._stringToLanguage(file.language);
+            if (lang === undefined)
+                continue;
+            if (! languages.has(lang))
+                languages.set(lang, new Map<string, any[]>());
+            let language = languages.get(lang);
+            if (language === undefined) // silence TS
+                continue;
+            for (const type of file.types) {
+                if (type.kind === undefined)
+                    continue;
+                if (! language.has(type.kind))
+                    language.set(type.kind, []);
+                let kind = language.get(type.kind);
+                if (kind === undefined) // silence TS
+                    continue;
+                kind.push(type);
+            }
         }
-        else
-            p = dir;
-        if (p)
-            languagesUD = parseLanguages(p);
     }
+
+    private _parseFiles(directoryPath: string): any[] {
+        let result: any[] = [];
+        let fileNames: string[] = [];
+        try {
+            fileNames = fs.readdirSync(directoryPath);
+        } catch(err) {}
+        for (const fileName of fileNames) {
+            if (fileName.endsWith('.json')) {
+                try {
+                    const p = path.join(directoryPath, fileName);
+                    const f = fs.readFileSync(p, 'utf-8');
+                    const o = JSON.parse(f);
+                    if (o.name === 'graphicaldebugging') {
+                        result.push(o);
+                    }
+                } catch(err) {}
+            }
+        }
+        return result;
+    }
+
+    private _stringToLanguage(name: string | undefined): debug.Language | undefined {
+        switch(name){
+            case 'cpp': return debug.Language.Cpp;
+            case 'java': return debug.Language.Java;
+            case 'javascript': return debug.Language.JavaScript;
+            case 'python': return debug.Language.Python;
+            default: return undefined;
+        }
+    }
+
+    private _languages: Map<debug.Language, Map<string, any[]>> = new Map<debug.Language, Map<string, any[]>>();
+    private _languagesUD: Map<debug.Language, Map<string, any[]>> = new Map<debug.Language, Map<string, any[]>>();
 }
+
+export let types: Types = new Types();
 
 // Return Container or Loader for Variable based on JSON definitions
 export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Container | Value | Loader | undefined> {
@@ -572,83 +605,77 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
     if (lang === undefined)
         return undefined;
 
-    const types: (any[] | undefined)[] = [languages.get(lang), languagesUD.get(lang)];
-    
-    for (const ts of types) {
-        if (ts) {
-            for (const entry of ts) {
-                if (variable.type.match('^' + entry.type + '$')) {
-                    if (entry.kind === 'container') {
-                        const container: Container | undefined = await getContainer(dbg, variable, entry);
-                        // TODO: Return raw container if it is desired.
-                        //       Additional parameter is needed for this.
-                        if (container) {
-                            const loader: ContainerLoader | undefined = await getContainerLoader(dbg, variable, container);
-                            if (loader)
-                                return loader;
-                        }
+    for (const entry of types.all(lang)) {
+        if (variable.type.match('^' + entry.type + '$')) {
+            if (entry.kind === 'container') {
+                const container: Container | undefined = await getContainer(dbg, variable, entry);
+                // TODO: Return raw container if it is desired.
+                //       Additional parameter is needed for this.
+                if (container) {
+                    const loader: ContainerLoader | undefined = await getContainerLoader(dbg, variable, container);
+                    if (loader)
+                        return loader;
+                }
+            }
+            else if (entry.kind === 'value') {
+                if (entry.name) {
+                    const name = await evaluateExpression(dbg, variable, entry.name);
+                    if (name) {
+                        return new Value(name.expression);
                     }
-                    else if (entry.kind === 'value') {
-                        if (entry.name) {
-                            const name = await evaluateExpression(dbg, variable, entry.name);
-                            if (name) {
-                                return new Value(name.expression);
-                            }
-                        }
+                }
+            }
+            else if (entry.kind === 'point') {
+                if (entry.coordinates && entry.coordinates.x && entry.coordinates.y) {
+                    const xEval = await evaluateExpression(dbg, variable, entry.coordinates.x);
+                    const yEval = await evaluateExpression(dbg, variable, entry.coordinates.y);
+                    if (xEval && yEval) {
+                        return new Point(xEval, yEval);
                     }
-                    else if (entry.kind === 'point') {
-                        if (entry.coordinates && entry.coordinates.x && entry.coordinates.y) {
-                            const xEval = await evaluateExpression(dbg, variable, entry.coordinates.x);
-                            const yEval = await evaluateExpression(dbg, variable, entry.coordinates.y);
-                            if (xEval && yEval) {
-                                return new Point(xEval, yEval);
-                            }
-                        }
+                }
+            }
+            else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
+                if (entry.points && entry.points.container && entry.points.container.name) {
+                    const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
+                    if (contExpr) {
+                        if (entry.kind === 'linestring')
+                            return new Linestring(contExpr);
+                        else if (entry.kind === 'ring')
+                            return new Ring(contExpr);
+                        else
+                            return new MultiPoint(contExpr);
                     }
-                    else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
-                        if (entry.points && entry.points.container && entry.points.container.name) {
-                            const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
-                            if (contExpr) {
-                                if (entry.kind === 'linestring')
-                                    return new Linestring(contExpr);
-                                else if (entry.kind === 'ring')
-                                    return new Ring(contExpr);
-                                else
-                                    return new MultiPoint(contExpr);
-                            }
+                }
+            }
+            else if (entry.kind === 'polygon') {
+                if (entry.exteriorring && entry.exteriorring.name) {
+                    const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
+                    if (extEval) {
+                        let intEval = undefined;
+                        if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
+                            intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
                         }
+                        return new Polygon(extEval, intEval);
                     }
-                    else if (entry.kind === 'polygon') {
-                        if (entry.exteriorring && entry.exteriorring.name) {
-                            const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
-                            if (extEval) {
-                                let intEval = undefined;
-                                if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
-                                    intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
-                                }
-                                return new Polygon(extEval, intEval);
-                            }
-                        }
+                }
+            }
+            else if (entry.kind === 'multilinestring') {
+                if (entry.linestrings && entry.linestrings.container && entry.linestrings.container.name) {
+                    const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name);
+                    if (contExpr) {
+                        const contVar = contExpr.variable;
+                        // TODO: only search for Container of Linestrings
+                        return await getLoader(dbg, contVar);
                     }
-                    else if (entry.kind === 'multilinestring') {
-                        if (entry.linestrings && entry.linestrings.container && entry.linestrings.container.name) {
-                            const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name);
-                            if (contExpr) {
-                                const contVar = contExpr.variable;
-                                // TODO: only search for Container of Linestrings
-                                return await getLoader(dbg, contVar);
-                            }
-                        }
-                    }
-                    else if (entry.kind === 'multipolygon') {
-                        if (entry.polygons && entry.polygons.container && entry.polygons.container.name) {
-                            const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name);
-                            if (contExpr) {
-                                const contVar = contExpr.variable;
-                                // TODO: only search for Container of Polygons
-                                return await getLoader(dbg, contVar);
-                            }
-                        }
+                }
+            }
+            else if (entry.kind === 'multipolygon') {
+                if (entry.polygons && entry.polygons.container && entry.polygons.container.name) {
+                    const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name);
+                    if (contExpr) {
+                        const contVar = contExpr.variable;
+                        // TODO: only search for Container of Polygons
+                        return await getLoader(dbg, contVar);
                     }
                 }
             }

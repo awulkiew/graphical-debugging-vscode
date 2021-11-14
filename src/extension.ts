@@ -83,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		if (graphicalWatch.variables.length > 0)
-			load.updateLoaders(debugHelper);
+			load.types.update(debugHelper);
 
 		drawableData = [];
 		for (let variable of graphicalWatch.variables) {
@@ -123,7 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
 			|| e.eventType === GraphicalWatchEventType.Edit) {
 			if (e.variable) {
 				if (debugHelper.isStopped()) {
-					load.updateLoaders(debugHelper);
+					load.types.update(debugHelper);
 					const d = await handleVariable(debugHelper, e.variable);
 					if (e.eventType === GraphicalWatchEventType.Add) {
 						drawableData.push(d);
