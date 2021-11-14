@@ -493,22 +493,39 @@ export class Polygon extends Geometry {
 
 export class Types {
 
-    *all(lang: debug.Language) {
-        for (const type of this._all(this._languages, lang))
+    *match(type: string, lang: debug.Language, kinds: string[] | undefined = undefined) {
+        for (const entry of this.get(lang, kinds))
+            if (type.match('^' + entry.type + '$'))
+                yield entry;
+    }
+
+    *get(lang: debug.Language, kinds: string[] | undefined = undefined) {
+        for (const type of this._get(this._languages, lang, kinds))
             yield type;
-        for (const type of this._all(this._languagesUD, lang))
+        for (const type of this._get(this._languagesUD, lang, kinds))
             yield type;
     }
 
-    private *_all(languages: Map<debug.Language, Map<string, any[]>>, lang: debug.Language) {
-        if (lang === undefined)
+    private *_get(map: Map<debug.Language, Map<string, any[]>>, language: debug.Language, kinds: string[] | undefined = undefined) {
+        if (language === undefined)
             return;
-        const kinds = languages.get(lang);
-        if (kinds === undefined)
+        const ks = map.get(language);
+        if (ks === undefined)
             return;
-        for (const types of kinds.values()) {
-            for (const type of types) {
-                yield type;
+        if (kinds === undefined) {
+            for (const k of ks) {
+                for (const t of k[1]) {
+                    yield t;
+                }
+            }
+        } else {
+            for (const kind of kinds) {
+                const k = ks.get(kind);
+                if (k !== undefined) {
+                    for (const t of k) {
+                        yield t;
+                    }
+                }
             }
         }
     }
@@ -599,84 +616,90 @@ export class Types {
 
 export let types: Types = new Types();
 
+// const nonContainers = ['value', 'point', 'linestring', 'ring', 'multipoint', 'polygon', 'multilinestring', 'multilipolygon'];
+// const geometries = ['point', 'linestring', 'ring', 'multipoint', 'polygon', 'multilinestring', 'multilipolygon'];
+
 // Return Container or Loader for Variable based on JSON definitions
-export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Container | Value | Loader | undefined> {
+export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Loader | undefined> {
     const lang: debug.Language | undefined = dbg.language();
     if (lang === undefined)
         return undefined;
 
-    for (const entry of types.all(lang)) {
-        if (variable.type.match('^' + entry.type + '$')) {
-            if (entry.kind === 'container') {
-                const container: Container | undefined = await getContainer(dbg, variable, entry);
-                // TODO: Return raw container if it is desired.
-                //       Additional parameter is needed for this.
-                if (container) {
-                    const loader: ContainerLoader | undefined = await getContainerLoader(dbg, variable, container);
-                    if (loader)
-                        return loader;
-                }
-            }
-            else if (entry.kind === 'value') {
-                if (entry.name) {
-                    const name = await evaluateExpression(dbg, variable, entry.name);
-                    if (name) {
-                        return new Value(name.expression);
+    for (const entry of types.match(variable.type, lang)) {
+        if (entry.kind === 'container') {
+            const container: Container | undefined = await _getContainer(dbg, variable, entry);
+            if (container) {
+                const elemStr = container.element(variable);
+                if (elemStr) {
+                    const e = await dbg.evaluate(elemStr);
+                    if (e && e.type) {
+                        const elemVar = new Variable(elemStr, e.type);
+                        // TODO: only search for non-containers to avoid recursion
+                        const elemLoad = await getLoader(dbg, elemVar);
+                        if (elemLoad instanceof Point)
+                            return new Points(container, elemLoad);
+                        else if (elemLoad instanceof Geometry)
+                            return new Geometries(container, elemLoad);
+                        const valLoad = await getValue(dbg, elemVar);
+                        if (valLoad instanceof Value)
+                            return new Values(container, valLoad);
+                        // Assume it's a container of numbers
+                        return new Numbers(container);
                     }
                 }
             }
-            else if (entry.kind === 'point') {
-                if (entry.coordinates && entry.coordinates.x && entry.coordinates.y) {
-                    const xEval = await evaluateExpression(dbg, variable, entry.coordinates.x);
-                    const yEval = await evaluateExpression(dbg, variable, entry.coordinates.y);
-                    if (xEval && yEval) {
-                        return new Point(xEval, yEval);
-                    }
+        }
+        else if (entry.kind === 'point') {
+            if (entry.coordinates && entry.coordinates.x && entry.coordinates.y) {
+                const xEval = await evaluateExpression(dbg, variable, entry.coordinates.x);
+                const yEval = await evaluateExpression(dbg, variable, entry.coordinates.y);
+                if (xEval && yEval) {
+                    return new Point(xEval, yEval);
                 }
             }
-            else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
-                if (entry.points && entry.points.container && entry.points.container.name) {
-                    const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
-                    if (contExpr) {
-                        if (entry.kind === 'linestring')
-                            return new Linestring(contExpr);
-                        else if (entry.kind === 'ring')
-                            return new Ring(contExpr);
-                        else
-                            return new MultiPoint(contExpr);
-                    }
+        }
+        else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
+            if (entry.points && entry.points.container && entry.points.container.name) {
+                const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
+                if (contExpr) {
+                    if (entry.kind === 'linestring')
+                        return new Linestring(contExpr);
+                    else if (entry.kind === 'ring')
+                        return new Ring(contExpr);
+                    else
+                        return new MultiPoint(contExpr);
                 }
             }
-            else if (entry.kind === 'polygon') {
-                if (entry.exteriorring && entry.exteriorring.name) {
-                    const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
-                    if (extEval) {
-                        let intEval = undefined;
-                        if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
-                            intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
-                        }
-                        return new Polygon(extEval, intEval);
+        }
+        else if (entry.kind === 'polygon') {
+            if (entry.exteriorring && entry.exteriorring.name) {
+                const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
+                if (extEval) {
+                    let intEval = undefined;
+                    if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
+                        intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
                     }
+                    return new Polygon(extEval, intEval);
                 }
             }
-            else if (entry.kind === 'multilinestring') {
-                if (entry.linestrings && entry.linestrings.container && entry.linestrings.container.name) {
-                    const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name);
-                    if (contExpr) {
-                        const contVar = contExpr.variable;
-                        // TODO: only search for Container of Linestrings
-                        return await getLoader(dbg, contVar);
-                    }
+        }
+        else if (entry.kind === 'multilinestring') {
+            if (entry.linestrings && entry.linestrings.container && entry.linestrings.container.name) {
+                const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name);
+                if (contExpr) {
+                    const contVar = contExpr.variable;
+                    // TODO: only search for Container of Linestrings
+                    return await getLoader(dbg, contVar);
                 }
             }
-            else if (entry.kind === 'multipolygon') {
-                if (entry.polygons && entry.polygons.container && entry.polygons.container.name) {
-                    const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name);
-                    if (contExpr) {
-                        const contVar = contExpr.variable;
-                        // TODO: only search for Container of Polygons
-                        return await getLoader(dbg, contVar);
-                    }
+        }
+        else if (entry.kind === 'multipolygon') {
+            if (entry.polygons && entry.polygons.container && entry.polygons.container.name) {
+                const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name);
+                if (contExpr) {
+                    const contVar = contExpr.variable;
+                    // TODO: only search for Container of Polygons
+                    return await getLoader(dbg, contVar);
                 }
             }
         }
@@ -684,8 +707,37 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
     return undefined;
 }
 
-// Return Container for Variable based on JSON definition
-async function getContainer(dbg: debug.Debugger, variable: Variable, entry: any): Promise<Container | undefined> {
+// Return Container for Variable based on JSON definitions
+async function getContainer(dbg: debug.Debugger, variable: Variable): Promise<Container | undefined> {
+    const lang: debug.Language | undefined = dbg.language();
+    if (lang === undefined)
+        return undefined;
+
+    for (const entry of types.match(variable.type, lang, ['container'])) {
+        const container = await _getContainer(dbg, variable, entry);
+        if (container)
+            return container;
+    }
+
+    return undefined;
+}
+
+// Return Value for Variable based on JSON definitions
+async function getValue(dbg: debug.Debugger, variable: Variable): Promise<Value | undefined> {
+    const lang: debug.Language | undefined = dbg.language();
+    if (lang === undefined)
+        return undefined;
+
+    for (const entry of types.match(variable.type, lang, ['value'])) {
+        const value = await _getValue(dbg, variable, entry);
+        if (value)
+            return value;
+    }
+
+    return undefined;
+}
+
+async function _getContainer(dbg: debug.Debugger, variable: Variable, entry: any): Promise<Container | undefined> {
     if (entry.array && entry.array.start && entry.array.size) {
         const start = await evaluateExpression(dbg, variable, entry.array.start);
         const size = await evaluateExpression(dbg, variable, entry.array.size);
@@ -702,24 +754,11 @@ async function getContainer(dbg: debug.Debugger, variable: Variable, entry: any)
     return undefined;
 }
 
-// Return ContainerLoader for Variable
-async function getContainerLoader(dbg: debug.Debugger, variable: Variable, container: Container): Promise<ContainerLoader | undefined> {
-    const elemStr = container.element(variable);
-    if (elemStr) {
-        const e = await dbg.evaluate(elemStr);
-        if (e && e.type) {
-            const elemVar = new Variable(elemStr, e.type);
-            // TODO: only search for non-containers to avoid recursion
-            const elemLoad = await getLoader(dbg, elemVar);
-            if (elemLoad instanceof Point) {
-                return new Points(container, elemLoad);
-            } else if (elemLoad instanceof Geometry) {
-                return new Geometries(container, elemLoad);
-            } else if (elemLoad instanceof Value) {
-                return new Values(container, elemLoad);
-            } else {
-                return new Numbers(container);
-            }
+async function _getValue(dbg: debug.Debugger, variable: Variable, entry: any): Promise<Value | undefined> {
+    if (entry.name) {
+        const name = await evaluateExpression(dbg, variable, entry.name);
+        if (name) {
+            return new Value(name.expression);
         }
     }
 }
