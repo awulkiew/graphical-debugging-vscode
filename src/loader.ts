@@ -238,6 +238,49 @@ export class DArray extends RandomAccessContainer {
     }
 }
 
+export class LinkedList extends Container
+{
+    constructor(
+        private _size: Expression,
+        private _headpointer: Expression,
+        private _nextpointer: Expression,
+        private _value: Expression) {
+        super();
+    }
+
+    element(variable: Variable): string | undefined {
+        const headName = '(*' + this._headpointer.toString(variable) + ')';
+        // TEMP: The original type is used by expression to get Tparams, not the head's type
+        //       Variable should be renamed or replaced with something in expression.toString()
+        const headVar = new Variable(headName, variable.type);
+        return this._value.toString(headVar);
+    }
+
+    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
+        const sizeStr = this._size.toString(variable);
+        // TODO: Check if it's possible to parse size at this point
+        const sizeExpr = await dbg.evaluate(sizeStr);
+        if (sizeExpr === undefined || sizeExpr.type === undefined)
+            return 0;
+        return parseInt(sizeExpr.result);
+    }
+
+    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
+        const size = await this.size(dbg, variable);
+        if (! (size > 0)) // also handle NaN
+            return;
+        
+        const headName = '(*' + this._headpointer.toString(variable) + ')';
+        // TEMP: The original type is used by expression to get Tparams, not the node's type
+        let nodeVar = new Variable(headName, variable.type);
+        for (let i = 0; i < size; ++i) {
+            const elStr = '(' + this._value.toString(nodeVar) + ')';
+            yield elStr;
+            nodeVar.name = '(*' + this._nextpointer.toString(nodeVar) + ')';
+        }
+    }
+}
+
 // Value
 
 export class Value {
@@ -750,6 +793,21 @@ async function _getContainer(dbg: debug.Debugger, variable: Variable, entry: any
         if (start && finish) {
             return new DArray(start.expression, finish.expression);
         }
+    } else if (entry.linkedlist && entry.linkedlist.size && entry.linkedlist.value) {
+        if (entry.linkedlist.headpointer && entry.linkedlist.nextpointer) {
+            const size = await evaluateExpression(dbg, variable, entry.linkedlist.size);
+            const headpointer = await evaluateExpression(dbg, variable, entry.linkedlist.headpointer);
+            if (size && headpointer) {
+                const headName = '(*' + headpointer.expression.toString(variable) + ')';
+                // TEMP: The original type is used by expression to get Tparams, not the head's type
+                //       Variable should be renamed or replaced with something in expression.toString()
+                const headVar = new Variable(headName, variable.type);
+                const nextpointer = await evaluateExpression(dbg, headVar, entry.linkedlist.nextpointer);
+                const value = await evaluateExpression(dbg, headVar, entry.linkedlist.value);
+                if (nextpointer && value)
+                    return new LinkedList(size.expression, headpointer.expression, nextpointer.expression, value.expression);
+            }
+        } // TODO: non-pointer versions - head && next
     }
     return undefined;
 }

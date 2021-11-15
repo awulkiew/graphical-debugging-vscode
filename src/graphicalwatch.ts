@@ -28,6 +28,7 @@ export class GraphicalWatchVariable extends vscode.TreeItem {
 	constructor(name: string, color: number) {
 		super(name, vscode.TreeItemCollapsibleState.None);
 		this.description = '';
+		this.tooltip = '';
 		this.contextValue = 'watchVariable';
 
 		this.color = color;
@@ -41,7 +42,7 @@ export class GraphicalWatchVariable extends vscode.TreeItem {
 	get name(): string { return this.label as string; }
 	set name(n : string) { this.label = n; }
 	get type(): string { return this.description as string; }
-	set type(t : string) { this.description = t; }
+	set type(t : string) { this.description = t; this.tooltip = t; }
 	readonly color: number = -1;
 }
 

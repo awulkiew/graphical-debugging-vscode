@@ -8,11 +8,11 @@ import * as colors from './colors.json'
 
 
 async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<draw.PlotlyData> {
-	gwVariable.description = 'not available';
+	gwVariable.type = 'not available';
 	const expr = await dbg.evaluate(gwVariable.name);
 	if (expr && expr.type) {
 		const type: string = expr.type;
-		gwVariable.description = type;
+		gwVariable.type = type;
 		const variable: load.Variable = new load.Variable(gwVariable.name, type);
 		const loader = await load.getLoader(dbg, variable);
 		if (loader instanceof load.Loader) {
@@ -113,7 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// TODO: cancel processing of variables
 	debugHelper.onUnavailable(() => {
 		for (let variable of graphicalWatch.variables) {
-			variable.description = 'not available';
+			variable.type = 'not available';
 		}
 		graphicalWatch.refreshAll();
 	});
@@ -136,7 +136,7 @@ export function activate(context: vscode.ExtensionContext) {
 					const message = prepareMessage(drawableData, vscode.window.activeColorTheme);
 					webview.showAndPostMessage(message);
 				} else {
-					e.variable.description = 'not available';
+					e.variable.type = 'not available';
 				}
 				graphicalWatch.refresh(e.variable);
 			}
