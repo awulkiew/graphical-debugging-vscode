@@ -1,0 +1,22 @@
+{
+    "name": "graphicaldebugging",
+    "language": "python",
+    "types": [
+        {
+            "type": "list",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.__len__()"
+            }
+        },
+        {
+            "type": "deque",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.__len__()"
+            }
+        }
+    ]
+}

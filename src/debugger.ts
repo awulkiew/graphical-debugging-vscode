@@ -112,11 +112,11 @@ export class Debugger {
             || this.sessionInfo.session.type === undefined)
             return undefined;
         const sessionType = this.sessionInfo.session.type;
-        if (sessionType === 'cppvsdbg' || sessionType === 'cppdbg')
+        if (['cppvsdbg', 'cppdbg'].includes(sessionType))
             return Language.Cpp;
         else if (sessionType === 'python')
             return Language.Python;
-        else if (sessionType === 'node' || sessionType === 'chrome')
+        else if (['node', 'chrome', 'msedge', 'pwa-node', 'pwa-chrome', 'pwa-msedge'].includes(sessionType))
             return Language.JavaScript;
         else if (sessionType === 'java')
             return Language.Java;

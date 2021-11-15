@@ -1,0 +1,14 @@
+{
+    "name": "graphicaldebugging",
+    "language": "javascript",
+    "types": [
+        {
+            "type": "Array",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.length"
+            }
+        }
+    ]
+}
