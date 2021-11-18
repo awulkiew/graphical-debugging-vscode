@@ -11,6 +11,11 @@
             }
         },
         {
+            "type": "boost::chrono::duration<.+>",
+            "kind": "value",
+            "name": "$this.rep_"
+        },
+        {
             "type": "boost::geometry::model::point<.+>",
             "kind": "point",
             "coordinates": {

@@ -20,6 +20,12 @@
             }
         },
         {
+            "type": "std::chrono::duration<.+>",
+            "kind": "value",
+            "name": "$this._MyRep",
+            "_comment": "msvc"
+        },
+        {
             "type": "std::array<.+>",
             "kind": "container",
             "array": {
@@ -49,6 +55,12 @@
             "_comment": "msvc",
             "_description": "next and value are relative to node",
             "_description2": "later use pointers for direct memory access"
+        },
+        {
+            "type": "std::chrono::duration<.+>",
+            "kind": "value",
+            "name": "$this.__r",
+            "_comment": "gcc/libstdc++"
         },
         {
             "type": "std::array<.+>",

@@ -26,7 +26,8 @@
                 "head": "$this.first",
                 "next": "$this.next",
                 "value": "$this.value"
-            }
+            },
+            "_comment": "llist module"
         },
         {
             "type": "dllist",
@@ -36,7 +37,8 @@
                 "head": "$this.first",
                 "next": "$this.next",
                 "value": "$this.value"
-            }
+            },
+            "_comment": "llist module"
         },
         {
             "type": "Point2D",
@@ -45,7 +47,7 @@
                 "x": "$this.x",
                 "y": "$this.y"
             },
-            "_comment": "SymPy"
+            "_comment": "SymPy module"
         },
         {
             "type": "Polygon",
@@ -53,7 +55,7 @@
             "points": {
                 "container": { "name": "$this.vertices" }
             },
-            "_comment": "SymPy"
+            "_comment": "SymPy module"
         }
     ]
 }
