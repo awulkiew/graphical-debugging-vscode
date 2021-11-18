@@ -17,6 +17,26 @@
                 "start": "$this",
                 "size": "$this.__len__()"
             }
+        },
+        {
+            "type": "sllist",
+            "kind": "container",
+            "linkedlist": {
+                "size": "$this.size",
+                "head": "$this.first",
+                "next": "$this.next",
+                "value": "$this.value"
+            }
+        },
+        {
+            "type": "dllist",
+            "kind": "container",
+            "linkedlist": {
+                "size": "$this.size",
+                "head": "$this.first",
+                "next": "$this.next",
+                "value": "$this.value"
+            }
         }
     ]
 }

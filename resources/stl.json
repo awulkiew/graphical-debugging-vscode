@@ -42,13 +42,13 @@
             "kind": "container",
             "linkedlist": {
                 "size": "$this._Mypair._Myval2._Mysize",
-                "headpointer": "$this._Mypair._Myval2._Myhead->_Next",
-                "nextpointer": "$this._Next",
+                "head": "*$this._Mypair._Myval2._Myhead->_Next",
+                "next": "*$this._Next",
                 "value": "$this._Myval"
             },
             "_comment": "msvc",
-            "_description": "nextpointer and value are relative to node",
-            "_description2": "alternative definition for non-c++ languages would use head and next instead of pointers"
+            "_description": "next and value are relative to node",
+            "_description2": "later use pointers for direct memory access"
         },
         {
             "type": "std::array<.+>",
@@ -73,8 +73,8 @@
             "kind": "container",
             "linkedlist": {
                 "size": "$this._M_impl._M_node._M_size",
-                "headpointer": "$this._M_impl._M_node._M_next",
-                "nextpointer": "$this._M_next",
+                "head": "*$this._M_impl._M_node._M_next",
+                "next": "*$this._M_next",
                 "value": "*($T0*)((std::_List_node<$T0 >*)&$this)._M_storage._M_storage"
             },
             "_comment": "gcc/libstdc++",
@@ -85,8 +85,8 @@
             "kind": "container",
             "linkedlist": {
                 "size": "$this._M_impl._M_node._M_size",
-                "headpointer": "$this._M_impl._M_node._M_next",
-                "nextpointer": "$this._M_next",
+                "head": "*$this._M_impl._M_node._M_next",
+                "next": "*$this._M_next",
                 "value": "*($T0*)((std::_List_node<$T0>*)&$this)._M_storage._M_storage"
             },
             "_comment": "gcc/libstdc++"

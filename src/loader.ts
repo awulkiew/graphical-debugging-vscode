@@ -238,18 +238,19 @@ export class DArray extends RandomAccessContainer {
     }
 }
 
+// TODO: Later when direct memory access is implemented allow passing pointers
 export class LinkedList extends Container
 {
     constructor(
         private _size: Expression,
-        private _headpointer: Expression,
-        private _nextpointer: Expression,
+        private _head: Expression,
+        private _next: Expression,
         private _value: Expression) {
         super();
     }
 
     element(variable: Variable): string | undefined {
-        const headName = '(*' + this._headpointer.toString(variable) + ')';
+        const headName = '(' + this._head.toString(variable) + ')';
         // TEMP: The original type is used by expression to get Tparams, not the head's type
         //       Variable should be renamed or replaced with something in expression.toString()
         const headVar = new Variable(headName, variable.type);
@@ -270,13 +271,13 @@ export class LinkedList extends Container
         if (! (size > 0)) // also handle NaN
             return;
         
-        const headName = '(*' + this._headpointer.toString(variable) + ')';
+        const headName = '(' + this._head.toString(variable) + ')';
         // TEMP: The original type is used by expression to get Tparams, not the node's type
         let nodeVar = new Variable(headName, variable.type);
         for (let i = 0; i < size; ++i) {
             const elStr = '(' + this._value.toString(nodeVar) + ')';
             yield elStr;
-            nodeVar.name = '(*' + this._nextpointer.toString(nodeVar) + ')';
+            nodeVar.name = '(' + this._next.toString(nodeVar) + ')';
         }
     }
 }
@@ -794,18 +795,18 @@ async function _getContainer(dbg: debug.Debugger, variable: Variable, entry: any
             return new DArray(start.expression, finish.expression);
         }
     } else if (entry.linkedlist && entry.linkedlist.size && entry.linkedlist.value) {
-        if (entry.linkedlist.headpointer && entry.linkedlist.nextpointer) {
+        if (entry.linkedlist.head && entry.linkedlist.next) {
             const size = await evaluateExpression(dbg, variable, entry.linkedlist.size);
-            const headpointer = await evaluateExpression(dbg, variable, entry.linkedlist.headpointer);
-            if (size && headpointer) {
-                const headName = '(*' + headpointer.expression.toString(variable) + ')';
+            const head = await evaluateExpression(dbg, variable, entry.linkedlist.head);
+            if (size && head) {
+                const headName = '(' + head.expression.toString(variable) + ')';
                 // TEMP: The original type is used by expression to get Tparams, not the head's type
                 //       Variable should be renamed or replaced with something in expression.toString()
                 const headVar = new Variable(headName, variable.type);
-                const nextpointer = await evaluateExpression(dbg, headVar, entry.linkedlist.nextpointer);
+                const next = await evaluateExpression(dbg, headVar, entry.linkedlist.next);
                 const value = await evaluateExpression(dbg, headVar, entry.linkedlist.value);
-                if (nextpointer && value)
-                    return new LinkedList(size.expression, headpointer.expression, nextpointer.expression, value.expression);
+                if (next && value)
+                    return new LinkedList(size.expression, head.expression, next.expression, value.expression);
             }
         } // TODO: non-pointer versions - head && next
     }
