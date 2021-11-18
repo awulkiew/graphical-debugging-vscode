@@ -37,6 +37,23 @@
                 "next": "$this.next",
                 "value": "$this.value"
             }
+        },
+        {
+            "type": "Point2D",
+            "kind": "point",
+            "coordinates": {
+                "x": "$this.x",
+                "y": "$this.y"
+            },
+            "_comment": "SymPy"
+        },
+        {
+            "type": "Polygon",
+            "kind": "ring",
+            "points": {
+                "container": { "name": "$this.vertices" }
+            },
+            "_comment": "SymPy"
         }
     ]
 }
