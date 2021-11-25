@@ -20,6 +20,25 @@
             }
         },
         {
+            "type": "std::deque<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this._Mypair._Myval2._Mysize"
+            },
+            "_comment": "generic definition using index operator"
+        },
+        {
+            "type": "std::complex<.+>",
+            "kind": "point",
+            "system": "complex",
+            "coordinates": {
+                "x": "$this._Val[0]",
+                "y": "$this._Val[1]"
+            },
+            "_comment": "msvc"
+        },
+        {
             "type": "std::chrono::duration<.+>",
             "kind": "value",
             "name": "$this._MyRep",

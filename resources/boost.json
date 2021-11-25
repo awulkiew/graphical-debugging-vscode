@@ -16,24 +16,147 @@
             "name": "$this.rep_"
         },
         {
-            "type": "boost::geometry::model::point<.+>",
+            "type": "boost::geometry::model::point<.+cartesian>",
             "kind": "point",
+            "system": "cartesian",
             "coordinates": {
                 "x": "$this.m_values[0]",
                 "y": "$this.m_values[1]"
             }
         },
         {
-            "type": "boost::geometry::model::d2::point_xy<.+>",
+            "type": "boost::geometry::model::point<.+spherical_equatorial.+degree.+>",
             "kind": "point",
+            "system": "geographic",
+            "unit": "degree",
             "coordinates": {
                 "x": "$this.m_values[0]",
                 "y": "$this.m_values[1]"
             }
         },
         {
-            "type": "boost::geometry::model::d3::point_xyz<.+>",
+            "type": "boost::geometry::model::point<.+spherical_equatorial.+radian.+>",
             "kind": "point",
+            "system": "geographic",
+            "unit": "radian",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::point<.+geographic.+degree.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "degree",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::point<.+geographic.+radian.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "radian",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d2::point_xy<.+cartesian>",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d2::point_xy<.+spherical_equatorial.+degree.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "degree",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d2::point_xy<.+spherical_equatorial.+radian.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "radian",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d2::point_xy<.+geographic.+degree.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "degree",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d2::point_xy<.+geographic.+radian.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "radian",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d3::point_xyz<.+cartesian>",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d3::point_xyz<.+spherical_equatorial.+degree.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "degree",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d3::point_xyz<.+spherical_equatorial.+radian.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "radian",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d3::point_xyz<.+geographic.+degree.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "degree",
+            "coordinates": {
+                "x": "$this.m_values[0]",
+                "y": "$this.m_values[1]"
+            }
+        },
+        {
+            "type": "boost::geometry::model::d3::point_xyz<.+geographic.+radian.+>",
+            "kind": "point",
+            "system": "geographic",
+            "unit": "radian",
             "coordinates": {
                 "x": "$this.m_values[0]",
                 "y": "$this.m_values[1]"

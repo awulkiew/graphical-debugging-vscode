@@ -43,6 +43,7 @@
         {
             "type": "Point2D",
             "kind": "point",
+            "system": "cartesian",
             "coordinates": {
                 "x": "$this.x",
                 "y": "$this.y"
