@@ -78,6 +78,7 @@ export class Webview {
 								margin: { b:25, l:30, r:15, t:25 },
 								paper_bgcolor: '#0000',
 								plot_bgcolor: '#0000',
+								dragmode: 'pan',
 								modebar: {
 									bgcolor: '#0000',
 									color: gridcolor,
