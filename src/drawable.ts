@@ -124,24 +124,21 @@ export class Ring extends Drawable {
     toPlotly(colorId: number): PlotlyData {
         let result = PlotlyData.empty(colorId);
         result.system = this.system;
-        const length = Math.min(this.xs.length, this.ys.length);
-        if (length > 0) {
-            result.traces = [
-                this.system !== System.Geographic
-                ? {
-                    x: this.xs,
-                    y: this.ys,
-                    type: "scatter",
-                    mode: "lines+markers",
-                    fill: 'toself'
-                } : {
-                    lon: this.xs,
-                    lat: this.ys,
-                    type: "scattergeo",
-                    mode: "lines+markers",
-                    fill: 'toself'
-                }];
-        }
+        result.traces = [
+            this.system !== System.Geographic
+            ? {
+                x: this.xs,
+                y: this.ys,
+                type: "scatter",
+                mode: "lines+markers",
+                fill: 'toself'
+            } : {
+                lon: this.xs,
+                lat: this.ys,
+                type: "scattergeo",
+                mode: "lines+markers",
+                fill: 'toself'
+            }];
         return result;
     }
 };
@@ -154,12 +151,41 @@ export class Polygon extends Drawable {
     }
     toPlotly(colorId: number): PlotlyData {
         // TODO: CW polygons are required for scattergeo
-
         let result = this.exteriorRing.toPlotly(colorId);
-        for (let interiorRing of this.interiorRings) {
-            const d = interiorRing.toPlotly(colorId);
-            for (const trace of d.traces)
-                result.traces.push(trace);
+        if (result.system !== System.Geographic) {
+            for (let interiorRing of this.interiorRings) {
+                const d = interiorRing.toPlotly(colorId);
+                result.traces[0].x.push(null);
+                result.traces[0].y.push(null);
+                result.traces[0].x = result.traces[0].x.concat(d.traces[0].x);
+                result.traces[0].y = result.traces[0].y.concat(d.traces[0].y);
+            }
+        } else {
+            // geographic has to be treated separately because typical way of dealing with holes does not work
+            result.traces[0].mode = 'markers';
+            result.traces[0].fill = 'toself';
+            result.traces.push({});
+            result.traces[1].lon = [].concat(result.traces[0].lon);
+            result.traces[1].lat = [].concat(result.traces[0].lat);
+            result.traces[1].type = result.traces[0].type;
+            result.traces[1].mode = 'lines';
+            let closeHoles = false;
+            for (let interiorRing of this.interiorRings) {
+                const d = interiorRing.toPlotly(colorId);
+                result.traces[0].lon.push(result.traces[0].lon[0]);
+                result.traces[0].lat.push(result.traces[0].lat[0]);
+                result.traces[0].lon = result.traces[0].lon.concat(d.traces[0].lon);
+                result.traces[0].lat = result.traces[0].lat.concat(d.traces[0].lat);
+                result.traces[1].lon.push(null);
+                result.traces[1].lat.push(null);
+                result.traces[1].lon = result.traces[1].lon.concat(d.traces[0].lon);
+                result.traces[1].lat = result.traces[1].lat.concat(d.traces[0].lat);
+                closeHoles = true;
+            }
+            if (closeHoles) {
+                result.traces[0].lon.push(result.traces[0].lon[0]);
+                result.traces[0].lat.push(result.traces[0].lat[0]);
+            }
         }
         return result;
     }
