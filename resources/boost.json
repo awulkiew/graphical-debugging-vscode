@@ -166,33 +166,15 @@
             "type": "boost::geometry::model::linestring<.+>",
             "kind": "linestring",
             "points": {
-                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
-        },
-        {
-            "type": "boost::geometry::model::linestring<.+>",
-            "kind": "linestring",
-            "points": {
-                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+            }
         },
         {
             "type": "boost::geometry::model::ring<.+>",
             "kind": "ring",
             "points": {
-                "container": { "name": "*($T3<$T0,$T4<$T0 > >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
-        },
-        {
-            "type": "boost::geometry::model::ring<.+>",
-            "kind": "ring",
-            "points": {
-                "container": { "name": "*($T3<$T0,$T4<$T0> >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+                "container": { "name": "*($T3<$T0,$T4<$T0>>*)(&$this)" }
+            }
         },
         {
             "type": "boost::geometry::model::polygon<.+>",
@@ -207,49 +189,22 @@
             "type": "boost::geometry::model::multi_point<.+>",
             "kind": "multipoint",
             "points": {
-                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
-        },
-        {
-            "type": "boost::geometry::model::multi_point<.+>",
-            "kind": "multipoint",
-            "points": {
-                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+            }
         },
         {
             "type": "boost::geometry::model::multi_linestring<.+>",
             "kind": "multilinestring",
             "linestrings": {
-                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
-        },
-        {
-            "type": "boost::geometry::model::multi_linestring<.+>",
-            "kind": "multilinestring",
-            "linestrings": {
-                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+            }
         },
         {
             "type": "boost::geometry::model::multi_polygon<.+>",
             "kind": "multipolygon",
             "polygons": {
-                "container": { "name": "*($T1<$T0,$T2<$T0 > >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
-        },
-        {
-            "type": "boost::geometry::model::multi_polygon<.+>",
-            "kind": "multipolygon",
-            "polygons": {
-                "container": { "name": "*($T1<$T0,$T2<$T0> >*)(&$this)" }
-            },
-            "_comment": "msvc requires no spaces in types besides space between > > so there are 2 versions"
+                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+            }
         },
         {
             "type": "boost::geometry::index::detail::varray<.+>",

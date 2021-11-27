@@ -22,18 +22,38 @@ async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable)
 			}
 		}
 	}
-	return new draw.PlotlyData([], [], gwVariable.color);
+	return draw.PlotlyData.empty(gwVariable.color);
+}
+
+function systemName(system: draw.System): string {
+	switch(system) {
+		case draw.System.Cartesian: return 'cartesian';
+		case draw.System.Complex: return 'complex';
+		case draw.System.Geographic: return 'geographic';
+		default: return '';
+	}
+}
+
+function createMessagePlot(message: any, system: draw.System): number {
+	const systemStr = systemName(system);
+	for (let i = 0; i < message.plots.length ; ++i)
+		if (message.plots[i].system === systemStr)
+			return i;
+	message.plots.push({
+		system: systemStr,
+		traces: [] as any
+	});
+	return message.plots.length - 1;
 }
 
 let drawableData: draw.PlotlyData[] = [];
 
-function prepareMessage(drawableData: draw.PlotlyData[], colorTheme: vscode.ColorTheme): any {
+function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTheme): any {
 	let message = {
 		color: '#888',
 		gridcolor: '#888',
 		activecolor: '#888',
-		traces: [] as any,
-		shapes: [] as any,
+		plots: [] as any
 	};
 	if (colorTheme.kind === vscode.ColorThemeKind.Light) {
 		message.color = '#555';
@@ -45,20 +65,18 @@ function prepareMessage(drawableData: draw.PlotlyData[], colorTheme: vscode.Colo
 		message.activecolor = '#bbb';
 	}
 	const themeColors = colorTheme.kind === vscode.ColorThemeKind.Light ? colors.light : colors.dark;
-	for (let d of drawableData) {
+	for (let d of potlyData) {
 		const colorStr = d.colorId >= 0 ? themeColors.colors[d.colorId] : themeColors.color;
+		const plotId = createMessagePlot(message, d.system);
 		for (let trace of d.traces) {
 			if (trace.type === "bar")
 				trace.marker = {color: colorStr + '88'};
 			else
 				trace.line = {color: colorStr + 'CC'};
-			trace.hoverinfo = "x+y";
-			message.traces.push(trace);
-		}
-		for (let shape of d.shapes) {
-			shape.line = {color: colorStr + 'CC'};
-			shape.fillcolor = colorStr + '55';
-			message.shapes.push(shape);
+			if (trace.fill !== undefined && trace.fill !== 'none')
+				trace.fillcolor = colorStr + '55';
+			trace.hoverinfo = d.system === draw.System.Geographic ? "lon+lat" : "x+y";
+			message.plots[plotId].traces.push(trace);
 		}
 	}
 	return message;
@@ -93,7 +111,7 @@ export function activate(context: vscode.ExtensionContext) {
 		graphicalWatch.refreshAll();
 
 		const message = prepareMessage(drawableData, vscode.window.activeColorTheme);
-		if (message.traces.length > 0 || message.shapes.length > 0) {
+		if (message.plots.length > 0) {
 			webview.showAndPostMessage(message);
 		}
 

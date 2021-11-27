@@ -106,21 +106,10 @@
                 "size": "$this._M_impl._M_node._M_size",
                 "head": "*$this._M_impl._M_node._M_next",
                 "next": "*$this._M_next",
-                "value": "*($T0*)((std::_List_node<$T0 >*)&$this)._M_storage._M_storage"
+                "value": "*($T0*)((std::_List_node<$T0>*)&$this)._M_storage._M_storage"
             },
             "_comment": "gcc/libstdc++",
             "_comment2": "should $this be replaced with something else in next and value?"
-        },
-        {
-            "type": "std::__cxx11::list<.+>",
-            "kind": "container",
-            "linkedlist": {
-                "size": "$this._M_impl._M_node._M_size",
-                "head": "*$this._M_impl._M_node._M_next",
-                "next": "*$this._M_next",
-                "value": "*($T0*)((std::_List_node<$T0>*)&$this)._M_storage._M_storage"
-            },
-            "_comment": "gcc/libstdc++"
         },
         {
             "type": "std::array<.+>",

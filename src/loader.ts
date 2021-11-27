@@ -81,22 +81,25 @@ export class Variable {
 }
 
 
-interface ExpressionPart {
+interface IExpressionPart {
     toString(variable: Variable): string;
 }
-class ExpressionString implements ExpressionPart {
+class ExpressionString implements IExpressionPart {
     constructor(private _str: string) {}
     toString(variable: Variable): string { return this._str; }
 }
-class ExpressionThis implements ExpressionPart {
+class ExpressionThis implements IExpressionPart {
     toString(variable: Variable): string { return '(' + variable.name + ')'; }
 }
-class ExpressionNParam implements ExpressionPart {
+class ExpressionNParam implements IExpressionPart {
     constructor(protected _i: number) {}
     toString(variable: Variable): string { return variable.nparam(this._i); }
 }
 class ExpressionTParam extends ExpressionNParam {
     toString(variable: Variable): string { return variable.tparam(this._i); }
+}
+class ExpressionType implements IExpressionPart {
+    toString(variable: Variable): string { return variable.type; }
 }
 export class Expression
 {
@@ -114,6 +117,10 @@ export class Expression
                 if (match[0] === '$this') {
                     this._parts.push(new ExpressionThis());
                     index = match.index + 5;
+                }
+                else if (match[0] === '$T') {
+                    this._parts.push(new ExpressionType());
+                    index = match.index + 2;
                 }
                 else if (match[0].startsWith('$T')) {
                     this._parts.push(new ExpressionTParam(parseInt(match[0].substr(2))));
@@ -135,10 +142,29 @@ export class Expression
         for (let part of this._parts) {
             result += part.toString(variable);            
         }
+        // TODO: do this only for C++ ?
+        // It is possible that this should depend on the debugger
+        return this._addSpaces(result);
+    }
+
+    private _addSpaces(str: string): string {
+        let result = '';
+        let p = '';
+        for (let c of str) {
+            if (c === '>') {
+                if (p === '>')
+                    result += ' >';
+                else
+                    result += '>';
+            }
+            else
+                result += c;
+            p = c;
+        }
         return result;
     }
 
-    private _parts : ExpressionPart[] = [];
+    private _parts : IExpressionPart[] = [];
 }
 
 
@@ -282,6 +308,10 @@ export class LinkedList extends Container
     }
 }
 
+// Unit
+
+export enum Unit { None, Degree, Radian };
+
 // Value
 
 export class Value {
@@ -321,7 +351,7 @@ export class Numbers extends ContainerLoader {
             const el = parseFloat(elEval.result);
             ys.push(el);
         }
-        return new draw.Plot(undefined, ys);
+        return new draw.Plot(undefined, ys, draw.System.None);
     }
 }
 
@@ -345,7 +375,7 @@ export class Values extends ContainerLoader {
                 return undefined
             ys.push(n);
         }
-        return new draw.Plot(undefined, ys);
+        return new draw.Plot(undefined, ys, draw.System.None);
     }
 }
 
@@ -363,6 +393,7 @@ export class Points extends ContainerLoader {
         let xs: number[] = [];
         let ys: number[] = [];
         let v = new Variable(elStr, elEval.type);
+        let system = draw.System.None;
         for await (let elStr of this._container.elements(dbg, variable)) {
             v.name = elStr;
             const point = await this._point.load(dbg, v);
@@ -371,8 +402,9 @@ export class Points extends ContainerLoader {
             const p = point as draw.Point;
             xs.push(p.x)
             ys.push(p.y);
+            system = p.system;
         }
-        return new draw.Plot(xs, ys);
+        return new draw.Plot(xs, ys, system);
     }
 }
 
@@ -409,7 +441,9 @@ export class Geometry extends Loader {
 export class Point extends Geometry {
     constructor(
         private _xEval: EvaluatedExpression,
-        private _yEval: EvaluatedExpression) {
+        private _yEval: EvaluatedExpression,
+        private _system: draw.System,
+        private _unit: Unit) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
@@ -421,9 +455,15 @@ export class Point extends Geometry {
         const ye = await dbg.evaluate(yStr);
         if (ye === undefined || ye.type === undefined)
             return undefined
-        const x = parseFloat(xe.result);
-        const y = parseFloat(ye.result);
-        return new draw.Point(x, y);
+        let x = parseFloat(xe.result);
+        let y = parseFloat(ye.result);
+        // Convert radians to degrees if needed
+        if (this._unit === Unit.Radian) {
+            const r2d = 180 / Math.PI;
+            x *= r2d;
+            y *= r2d;
+        }
+        return new draw.Point(x, y, this._system);
     }
 }
 
@@ -458,7 +498,7 @@ export class Ring extends PointsRange {
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const plot = await super.load(dbg, variable);
         if (plot instanceof draw.Plot && plot.xs)
-            return new draw.Ring(plot.xs, plot.ys);
+            return new draw.Ring(plot.xs, plot.ys, plot.system);
         else
             return undefined;
     }
@@ -694,11 +734,12 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             }
         }
         else if (entry.kind === 'point') {
-            if (entry.coordinates && entry.coordinates.x && entry.coordinates.y) {
+            if (entry.coordinates?.x && entry.coordinates?.y) {
                 const xEval = await evaluateExpression(dbg, variable, entry.coordinates.x);
                 const yEval = await evaluateExpression(dbg, variable, entry.coordinates.y);
                 if (xEval && yEval) {
-                    return new Point(xEval, yEval);
+                    let su = _getSystemAndUnit(entry);
+                    return new Point(xEval, yEval, su[0], su[1]);
                 }
             }
         }
@@ -820,4 +861,22 @@ async function _getValue(dbg: debug.Debugger, variable: Variable, entry: any): P
             return new Value(name.expression);
         }
     }
+}
+
+function _getSystemAndUnit(entry: any): [draw.System, Unit] {
+    let system = draw.System.None;
+    let unit = Unit.None;
+    if (entry?.system === 'cartesian') {
+        system = draw.System.Cartesian;
+    }
+    else if (entry?.system === 'geographic') {
+        system = draw.System.Geographic;
+        unit = Unit.Degree;
+        if (entry?.unit === 'radian')
+            unit = Unit.Radian;
+    }
+    else if (entry?.system === 'complex') {
+        system = draw.System.Complex;
+    }
+    return [system, unit];
 }

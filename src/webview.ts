@@ -40,7 +40,7 @@ export class Webview {
 			);
 
 			const plotlyPath = vscode.Uri.file(
-				path.join(this._context.extensionPath, 'resources', 'plotly-2.4.2.min.js')
+				path.join(this._context.extensionPath, 'resources', 'plotly-2.6.3.min.js')
 			);
 			const plotlySrc = this._panel.webview.asWebviewUri(plotlyPath);
 			this._panel.webview.html = this.getWebviewContent(plotlySrc);
@@ -90,6 +90,31 @@ export class Webview {
 								yaxis: {
 									color: color,
 									gridcolor: gridcolor
+								},
+								geo: {
+									bgcolor: '#0000',
+									projection: {
+										type: 'orthographic',
+										rotation: {
+											lon: 20,
+											lat: 10
+										},
+									},
+									showocean: true,
+									oceancolor: '#0000',
+									showland: true,
+									landcolor: '#0000',
+									showlakes: false,
+									lakecolor: '#0000',
+									showcountries: true,
+									lonaxis: {
+										showgrid: true,
+										gridcolor: gridcolor
+									},
+									lataxis: {
+										showgrid: true,
+										gridcolor: gridcolor
+									}
 								}
 							};
 						};
@@ -103,14 +128,22 @@ export class Webview {
 					</script>
 				</head>
 				<body style="margin:0;padding:0;height:100%;">
-					<div id="plot" style="margin:0;padding:0;width:100%;height:100%;"></div>
 					<script>
 						window.addEventListener('message', event => {
-							plot = document.getElementById('plot');
-							layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor);
-							if (event.data.shapes.length > 0)
-								layout.shapes = event.data.shapes;
-							Plotly.newPlot(plot, event.data.traces, layout, config);
+							plots = document.getElementsByClassName('plot');
+							while (plots.length > 0)
+								plots[0].parentNode.removeChild(plots[0]);
+							style = event.data.plots.length > 1
+								  ? "margin:0;padding:0;width:100vw;height:100vw;"
+								  : "margin:0;padding:0;width:100%;height:100%;";
+							for (let i = 0 ; i < event.data.plots.length ; ++i) {
+								plot = document.createElement("div");
+								plot.setAttribute("class", "plot");
+								plot.setAttribute("style", style);
+								document.body.appendChild(plot); 
+								layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor);
+								Plotly.newPlot(plot, event.data.plots[i].traces, layout, config);
+							}
 						});
 
 						const vscode = acquireVsCodeApi();
