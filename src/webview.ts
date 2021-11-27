@@ -95,11 +95,7 @@ export class Webview {
 								geo: {
 									bgcolor: '#0000',
 									projection: {
-										type: 'orthographic',
-										rotation: {
-											lon: 20,
-											lat: 10
-										},
+										type: 'orthographic'
 									},
 									showocean: true,
 									oceancolor: '#0000',
@@ -119,6 +115,27 @@ export class Webview {
 								}
 							};
 						};
+
+						function setupPlotElements(count) {
+							let plots = document.body.getElementsByClassName('graphicaldebugging-plot');
+							while (plots.length > 0 && plots.length > count) {
+								let plot = plots[plots.length - 1];
+								plot.parentNode.removeChild(plot);
+							}
+							while (plots.length < count) {
+								let plot = document.createElement("div");
+								plot.setAttribute("class", "graphicaldebugging-plot");
+								document.body.appendChild(plot);
+							}
+							if (plots.length === 1) {
+								plots[0].setAttribute("style", "margin:0;padding:0;width:100%;height:100%;");
+							} else if (plots.length > 1) {
+								for (plot of plots)
+									plot.setAttribute("style", "margin:0;padding:0;width:100vw;height:100vw;");
+							}
+							return plots;
+						}
+
 						var layout = getLayout('#888', '#888', '#888');
 						var config = {
 							modeBarButtonsToRemove: ['select', 'lasso', 'resetScale', 'toImage', 'sendDataToCloud'],
@@ -131,20 +148,10 @@ export class Webview {
 				<body style="margin:0;padding:0;height:100%;">
 					<script>
 						window.addEventListener('message', event => {
-							plots = document.getElementsByClassName('plot');
-							while (plots.length > 0)
-								plots[0].parentNode.removeChild(plots[0]);
-							style = event.data.plots.length > 1
-								  ? "margin:0;padding:0;width:100vw;height:100vw;"
-								  : "margin:0;padding:0;width:100%;height:100%;";
-							for (let i = 0 ; i < event.data.plots.length ; ++i) {
-								plot = document.createElement("div");
-								plot.setAttribute("class", "plot");
-								plot.setAttribute("style", style);
-								document.body.appendChild(plot); 
-								layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor);
-								Plotly.newPlot(plot, event.data.plots[i].traces, layout, config);
-							}
+							let layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor);
+							let plots = setupPlotElements(event.data.plots.length);
+							for (let i = 0 ; i < event.data.plots.length ; ++i)
+								Plotly.newPlot(plots[i], event.data.plots[i].traces, layout, config);
 						});
 
 						const vscode = acquireVsCodeApi();

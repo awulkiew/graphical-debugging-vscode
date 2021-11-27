@@ -66,6 +66,8 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 	}
 	const themeColors = colorTheme.kind === vscode.ColorThemeKind.Light ? colors.light : colors.dark;
 	for (let d of potlyData) {
+		if (d.traces.length < 1)
+			continue;
 		const colorStr = d.colorId >= 0 ? themeColors.colors[d.colorId] : themeColors.color;
 		const plotId = createMessagePlot(message, d.system);
 		for (let trace of d.traces) {
