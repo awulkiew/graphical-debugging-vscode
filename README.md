@@ -13,7 +13,7 @@ This extension allows to display graphical representation of variables during de
 
 #### Supported types
 
-##### C/C++
+##### C/C++ (cppvsdbg, cppdbg)
 
 * Containers of values, points and other geometries
   * C-style array
@@ -28,12 +28,12 @@ This extension allows to display graphical representation of variables during de
   * STL: `complex`, `pair`
   * Boost.Geometry: `linestring`, `multi_linestring`, `multi_point`, `multi_polygon`, `point`, `point_xy`, `point_xyz`, `polygon`, `ring`
 
-##### Javascript
+##### Javascript (node, chrome, msedge, pwa-node, pwa-chrome, pwa-msedge)
 
 * Containers of values, points and other geometries
   * `Array`
 
-##### Python
+##### Python (python)
 
 * Containers of values, points and other geometries
   * `deque`, `list`
