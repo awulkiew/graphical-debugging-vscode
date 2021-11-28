@@ -28,6 +28,11 @@ This extension allows to display graphical representation of variables during de
   * STL: `complex`, `pair`
   * Boost.Geometry: `linestring`, `multi_linestring`, `multi_point`, `multi_polygon`, `point`, `point_xy`, `point_xyz`, `polygon`, `ring`
 
+##### Javascript
+
+* Containers of values, points and other geometries
+  * `Array`
+
 ##### Python
 
 * Containers of values, points and other geometries

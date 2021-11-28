@@ -9,9 +9,8 @@ import * as colors from './colors.json'
 
 async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<draw.PlotlyData> {
 	gwVariable.type = 'not available';
-	const expr = await dbg.evaluate(gwVariable.name);
-	if (expr && expr.type) {
-		const type: string = expr.type;
+	const type = await dbg.getType(gwVariable.name);
+	if (type) {
 		gwVariable.type = type;
 		const variable: load.Variable = new load.Variable(gwVariable.name, type);
 		const loader = await load.getLoader(dbg, variable);
@@ -123,9 +122,9 @@ export function activate(context: vscode.ExtensionContext) {
 			webview.showAndPostMessage(message);
 		}
 
-		// let expr2 = await debugHelper.evaluate("&arrd[0]");
+		// let expr2 = await dbg.evaluate("&arrd[0]");
 		// if (expr2 && expr2.memoryReference) {
-		// 	let buffer = await debugHelper.readMemoryBuffer(expr2.memoryReference, 0, 10240);
+		// 	let buffer = await dbg.readMemoryBuffer(expr2.memoryReference, 0, 10240);
 		// 	if (buffer) {
 		// 		let bufferLength = buffer.length;
 		// 		let a = buffer.readDoubleLE(0);

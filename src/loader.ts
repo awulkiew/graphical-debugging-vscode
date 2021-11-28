@@ -172,18 +172,17 @@ class EvaluatedExpression {
     constructor(
         public expression: Expression,
         public name: string,
-        public evaluated: any
+        public type: string
     ) {}
 
-    get type(): string { return this.evaluated.type; }
-    get variable(): Variable { return new Variable(this.name, this.evaluated.type); }
+    get variable(): Variable { return new Variable(this.name, this.type); }
 }
 
 async function evaluateExpression(dbg: debug.Debugger, variable: Variable, expression: string): Promise<EvaluatedExpression | undefined> {
 	const expr = new Expression(expression);
 	const str = expr.toString(variable);
-	const e = await dbg.evaluate(str);
-    return e !== undefined && e.type !== undefined ? new EvaluatedExpression(expr, str, e) : undefined;
+	const vt = await dbg.getValueAndType(str);
+    return vt !== undefined ? new EvaluatedExpression(expr, str, vt[1]) : undefined;
 }
 
 // Various Containers
@@ -215,10 +214,8 @@ export class Array extends ContiguousContainer
     async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = this._size.toString(variable);
         // TODO: Check if it's possible to parse size at this point
-        const sizeExpr = await dbg.evaluate(sizeStr);
-        if (sizeExpr === undefined || sizeExpr.type === undefined)
-            return 0;
-        return parseInt(sizeExpr.result);
+        const sizeVal = await dbg.getValue(sizeStr);
+        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
     }
 
     async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
@@ -247,10 +244,8 @@ export class DArray extends RandomAccessContainer {
 
     async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = '(' + this._finish.toString(variable) + ')-(' + this._start.toString(variable) + ')';
-        const sizeExpr = await dbg.evaluate(sizeStr);
-        if (sizeExpr === undefined || sizeExpr.type === undefined)
-            return 0;
-        return parseInt(sizeExpr.result);
+        const sizeVal = await dbg.getValue(sizeStr);
+        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
     }
 
     async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
@@ -286,10 +281,8 @@ export class LinkedList extends Container
     async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = this._size.toString(variable);
         // TODO: Check if it's possible to parse size at this point
-        const sizeExpr = await dbg.evaluate(sizeStr);
-        if (sizeExpr === undefined || sizeExpr.type === undefined)
-            return 0;
-        return parseInt(sizeExpr.result);
+        const sizeVal = await dbg.getValue(sizeStr);
+        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
     }
 
     async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
@@ -319,10 +312,8 @@ export class Value {
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<number | undefined> {
         const valStr = this._name.toString(variable);
-        const valEval = await dbg.evaluate(valStr);
-        if (valEval === undefined || valEval.type === undefined)
-            return undefined;
-        return parseFloat(valEval.result);
+        const valVal = await dbg.getValue(valStr);
+        return valVal !== undefined ? parseFloat(valVal) : undefined;
     }
 }
 
@@ -345,10 +336,10 @@ export class Numbers extends ContainerLoader {
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         let ys: number[] = [];
         for await (let elStr of this._container.elements(dbg, variable)) {
-            const elEval = await dbg.evaluate(elStr);
-            if (elEval === undefined || elEval.type === undefined)
+            const elVal = await dbg.getValue(elStr);
+            if (elVal === undefined)
                 return undefined;
-            const el = parseFloat(elEval.result);
+            const el = parseFloat(elVal);
             ys.push(el);
         }
         return new draw.Plot(undefined, ys, draw.System.None);
@@ -363,11 +354,11 @@ export class Values extends ContainerLoader {
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
-        const elEval = await dbg.evaluate(elStr);
-        if (elEval === undefined || elEval.type === undefined)
+        const elType = await dbg.getType(elStr);
+        if (elType === undefined)
             return undefined;
         let ys: number[] = [];
-        let v = new Variable(elStr, elEval.type);
+        let v = new Variable(elStr, elType);
         for await (let elStr of this._container.elements(dbg, variable)) {
             v.name = elStr;
             const n = await this._value.load(dbg, v);
@@ -387,12 +378,12 @@ export class Points extends ContainerLoader {
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
-        const elEval = await dbg.evaluate(elStr);
-        if (elEval === undefined || elEval.type === undefined)
+        const elType = await dbg.getType(elStr);
+        if (elType === undefined)
             return undefined;
         let xs: number[] = [];
         let ys: number[] = [];
-        let v = new Variable(elStr, elEval.type);
+        let v = new Variable(elStr, elType);
         let system = draw.System.None;
         for await (let elStr of this._container.elements(dbg, variable)) {
             v.name = elStr;
@@ -416,11 +407,11 @@ export class Geometries extends ContainerLoader {
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
-        const elEval = await dbg.evaluate(elStr);
-        if (elEval === undefined || elEval.type === undefined)
+        const elType = await dbg.getType(elStr);
+        if (elType === undefined)
             return undefined;
         let drawables: draw.Drawable[] = [];
-        let v = new Variable(elStr, elEval.type);
+        let v = new Variable(elStr, elType);
         for await (let elStr of this._container.elements(dbg, variable)) {
             v.name = elStr;
             const d = await this._geometry.load(dbg, v);
@@ -435,7 +426,6 @@ export class Geometries extends ContainerLoader {
 // Geometric primitives
 
 export class Geometry extends Loader {
-
 }
 
 export class Point extends Geometry {
@@ -448,15 +438,15 @@ export class Point extends Geometry {
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const xStr = this._xEval.expression.toString(variable);
-        const xe = await dbg.evaluate(xStr);
-        if (xe === undefined || xe.type === undefined)
-            return undefined
+        const xVal = await dbg.getValue(xStr);
+        if (xVal === undefined)
+            return undefined;
         const yStr = this._yEval.expression.toString(variable);
-        const ye = await dbg.evaluate(yStr);
-        if (ye === undefined || ye.type === undefined)
-            return undefined
-        let x = parseFloat(xe.result);
-        let y = parseFloat(ye.result);
+        const yVal = await dbg.getValue(yStr);
+        if (yVal === undefined)
+            return undefined;
+        let x = parseFloat(xVal);
+        let y = parseFloat(yVal);
         // Convert radians to degrees if needed
         if (this._unit === Unit.Radian) {
             const r2d = 180 / Math.PI;
@@ -715,9 +705,9 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             if (container) {
                 const elemStr = container.element(variable);
                 if (elemStr) {
-                    const e = await dbg.evaluate(elemStr);
-                    if (e && e.type) {
-                        const elemVar = new Variable(elemStr, e.type);
+                    const elemType = await dbg.getType(elemStr);
+                    if (elemType !== undefined) {
+                        const elemVar = new Variable(elemStr, elemType);
                         // TODO: only search for non-containers to avoid recursion
                         const elemLoad = await getLoader(dbg, elemVar);
                         if (elemLoad instanceof Point)

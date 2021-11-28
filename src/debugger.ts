@@ -107,11 +107,9 @@ export class Debugger {
     }
 
     language(): Language | undefined {
-        if (this.sessionInfo === undefined
-            || this.sessionInfo.session === undefined
-            || this.sessionInfo.session.type === undefined)
+        const sessionType = this.sessionInfo?.session?.type;
+        if (sessionType === undefined)
             return undefined;
-        const sessionType = this.sessionInfo.session.type;
         if (['cppvsdbg', 'cppdbg'].includes(sessionType))
             return Language.Cpp;
         else if (sessionType === 'python')
@@ -176,6 +174,39 @@ export class Debugger {
             return new MachineInfo(pointerSize, endianness);
         }
         return undefined;
+    }
+
+    async getType(expression: string): Promise<string | undefined> {
+        let type = (await this.evaluate(expression))?.type;
+        // TODO: checking for language each time is quite heavy,
+        //       it could be done once when the session starts
+        if (type === 'object' && this.language() === Language.JavaScript) {
+            const expr = await this.evaluate('(' + expression + ').constructor.name');
+            if (expr?.type !== undefined && expr?.result !== undefined) {
+                type = expr.result.substr(1, expr.result.length - 2);
+            }            
+        }
+        return type;
+    }
+
+    async getValue(expression: string): Promise<string | undefined> {
+        const result = await this.evaluate(expression);
+        return result?.type ? result.result : undefined;
+    }
+
+    async getValueAndType(expression: string): Promise<[string, string] | undefined> {
+        const expr = await this.evaluate(expression);
+        const value = expr?.result;
+        let type = expr?.type;
+        // TODO: checking for language each time is quite heavy,
+        //       it could be done once when the session starts
+        if (type === 'object' && this.language() === Language.JavaScript) {
+            const expr = await this.evaluate('(' + expression + ').constructor.name');
+            if (expr?.type !== undefined && expr?.result !== undefined) {
+                type = expr.result.substr(1, expr.result.length - 2);
+            }
+        }
+        return type !== undefined && value !== undefined ? [value, type] : undefined;
     }
 
     async evaluate(expression: string) {
