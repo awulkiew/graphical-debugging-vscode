@@ -108,6 +108,49 @@
 					"type": "string",
 					"default": ".",
 					"description": "The directory containing JSON files containing additional type definitions. Directory starting with `.` is relative to workspace."
+				},
+				"graphicalDebugging.geographicProjection": {
+					"type": "string",
+					"default": "orthographic",
+					"enum": [
+						"azimuthal equal area",
+						"azimuthal equidistant",
+						"eckert4",
+						"equirectangular",
+						"conic equal area",
+						"conic conformal",
+						"conic equidistant",
+						"gnomonic",
+						"hammer",
+						"kavrayskiy7",
+						"mercator",
+						"miller",
+						"mollweide",
+						"natural earth",
+						"orthographic",
+						"robinson",
+						"stereographic",
+						"transverse mercator"],
+					"enumDescriptions": [
+						"Lambert azimuthal equal-area projection (azimuthal, equal-area).",
+						"Azimuthal equidistant projection (azimuthal, equidistant).",
+						"Eckert IV projection (pseudocylindrical, equal-area).",
+						"Equirectangular projection (cylindrical, equidistant).",
+						"Albers equal-area conic projection (conic, equal-area).",
+						"Lambert conformal conic projection (conic, conformal).",
+						"Equidistant conic projection (conic, equidistant).",
+						"Gnomonic projection (azimuthal, gnomonic).",
+						"Hammer projection (pseudoazimuthal, equal-area).",
+						"Kavrayskiy VII (pseudocylindrical, compromise).",
+						"Mercator projection (cylindrical, conformal).",
+						"Miller projection (cylindrical, compromise).",
+						"Mollweide projection (pseudocylindrical, equal-area).",
+						"Natural Earth projection (pseudocylindrical, compromise).",
+						"Orthographic projection (azimuthal, perspective).",
+						"Robinson projection (pseudocylindrical, compromise).",
+						"Stereographic projection (azimuthal, conformal).",
+						"Transverse Mercator projection (cylindrical, conformal)."
+					  ]
 				}
 			}
 		}

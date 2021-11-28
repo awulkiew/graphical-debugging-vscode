@@ -72,7 +72,7 @@ export class Webview {
 					<title>Graphical Watch</title>
 					<script src="${plotlySrc}"></script>
 					<script>
-						function getLayout(color, gridcolor, activecolor) {
+						function getLayout(color, gridcolor, activecolor, projection) {
 							return {
 								showlegend: false,
 								margin: { b:25, l:30, r:15, t:25 },
@@ -95,7 +95,7 @@ export class Webview {
 								geo: {
 									bgcolor: '#0000',
 									projection: {
-										type: 'orthographic'
+										type: projection
 									},
 									showocean: true,
 									oceancolor: '#0000',
@@ -136,7 +136,7 @@ export class Webview {
 							return plots;
 						}
 
-						var layout = getLayout('#888', '#888', '#888');
+						var layout = getLayout('#888', '#888', '#888', 'orthographic');
 						var config = {
 							modeBarButtonsToRemove: ['select', 'lasso', 'resetScale', 'toImage', 'sendDataToCloud'],
 							displaylogo: false,
@@ -148,7 +148,7 @@ export class Webview {
 				<body style="margin:0;padding:0;height:100%;">
 					<script>
 						window.addEventListener('message', event => {
-							let layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor);
+							let layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor, event.data.projection);
 							let plots = setupPlotElements(event.data.plots.length);
 							for (let i = 0 ; i < event.data.plots.length ; ++i)
 								Plotly.newPlot(plots[i], event.data.plots[i].traces, layout, config);

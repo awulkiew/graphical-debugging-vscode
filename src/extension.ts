@@ -53,6 +53,7 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 		color: '#888',
 		gridcolor: '#888',
 		activecolor: '#888',
+		projection: 'orthographic',
 		plots: [] as any
 	};
 	if (colorTheme.kind === vscode.ColorThemeKind.Light) {
@@ -81,6 +82,11 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 			message.plots[plotId].traces.push(trace);
 		}
 	}
+
+	let projection = vscode.workspace.getConfiguration().get<string>('graphicalDebugging.geographicProjection');
+	if (projection !== undefined)
+		message.projection = projection;
+
 	return message;
 }
 
