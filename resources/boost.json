@@ -16,6 +16,22 @@
             "name": "$this.rep_"
         },
         {
+            "type": "boost::container::static_vector<.+>",
+            "kind": "container",
+            "array": {
+                "start": "($T0*)$this.m_holder.storage.data",
+                "size": "$this.m_holder.m_size"
+            }
+        },
+        {
+            "type": "boost::container::vector<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this.m_holder.m_start",
+                "size": "$this.m_holder.m_size"
+            }
+        },
+        {
             "type": "boost::geometry::model::point<.+cartesian>",
             "kind": "point",
             "system": "cartesian",
@@ -212,6 +228,30 @@
             "array": {
                 "start": "($T0*)$this.m_storage.data_.buf",
                 "size": "$this.m_size"
+            }
+        },
+        {
+            "type": "boost::polygon::point_data<.+>",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.coords_[0]",
+                "y": "$this.coords_[1]"
+            }
+        },
+        {
+            "type": "boost::polygon::polygon_data<.+>",
+            "kind": "ring",
+            "points": {
+                "container": { "name": "$this.coords_" }
+            }
+        },
+        {
+            "type": "boost::polygon::polygon_with_holes_data<.+>",
+            "kind": "polygon",
+            "exteriorring": { "name": "$this.self_" },
+            "interiorrings": {
+                "container": { "name": "$this.holes_" }
             }
         },
         {

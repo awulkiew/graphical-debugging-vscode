@@ -19,6 +19,7 @@ This extension allows to display graphical representation of variables during de
   * C-style array
   * STL: `array`, `deque`, `list`, `vector`
   * Boost.Array: `array`
+  * Boost.Container: `static_vector`, `vector`
   * Boost.Geometry: `varray`
 * 1D values
   * STL: `duration`
@@ -27,6 +28,7 @@ This extension allows to display graphical representation of variables during de
 * 2D values/geometries
   * STL: `complex`, `pair`
   * Boost.Geometry: `linestring`, `multi_linestring`, `multi_point`, `multi_polygon`, `point`, `point_xy`, `point_xyz`, `polygon`, `ring`
+  * Boost.Polygon: `point_data`, `polygon_data`, `polygon_with_holes_data`
 
 ##### Javascript (node, chrome, msedge, pwa-node, pwa-chrome, pwa-msedge)
 
