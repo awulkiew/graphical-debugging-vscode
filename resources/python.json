@@ -57,6 +57,69 @@
                 "container": { "name": "$this.vertices" }
             },
             "_comment": "SymPy module"
+        },
+        {
+            "type": "Point",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.x",
+                "y": "$this.y"
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "tuple",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this[0]",
+                "y": "$this[1]"
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "CoordinateSequence",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.__len__()"
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "InteriorRingSequence",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.__len__()"
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "LineString",
+            "kind": "linestring",
+            "points": {
+                "container": { "name": "$this.coords" }
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "LinearRing",
+            "kind": "ring",
+            "points": {
+                "container": { "name": "$this.coords" }
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "Polygon",
+            "kind": "polygon",
+            "exteriorring": { "name": "$this.exterior" },
+            "interiorrings": {
+                "container": { "name": "$this.interiors" }
+            },
+            "_comment": "Shapely module"
         }
     ]
 }

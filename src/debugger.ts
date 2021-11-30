@@ -6,7 +6,27 @@ export class SessionInfo {
         public session: vscode.DebugSession,
         public threadId: number,
         public frameId: number)
-    {}
+    {
+        this.language = this._getLanguage();
+    }
+
+    private _getLanguage(): Language | undefined {
+        const sessionType = this.session.type;
+        if (sessionType === undefined)
+            return undefined;
+        if (['cppvsdbg', 'cppdbg'].includes(sessionType))
+            return Language.Cpp;
+        else if (sessionType === 'python')
+            return Language.Python;
+        else if (['node', 'chrome', 'msedge', 'pwa-node', 'pwa-chrome', 'pwa-msedge'].includes(sessionType))
+            return Language.JavaScript;
+        else if (sessionType === 'java')
+            return Language.Java;
+        else
+            return undefined;
+    }
+
+    public language: Language | undefined;
 }
 
 export enum Endianness { Little, Big };
@@ -107,19 +127,9 @@ export class Debugger {
     }
 
     language(): Language | undefined {
-        const sessionType = this.sessionInfo?.session?.type;
-        if (sessionType === undefined)
+        if (this.sessionInfo === undefined)
             return undefined;
-        if (['cppvsdbg', 'cppdbg'].includes(sessionType))
-            return Language.Cpp;
-        else if (sessionType === 'python')
-            return Language.Python;
-        else if (['node', 'chrome', 'msedge', 'pwa-node', 'pwa-chrome', 'pwa-msedge'].includes(sessionType))
-            return Language.JavaScript;
-        else if (sessionType === 'java')
-            return Language.Java;
-        else
-            return undefined;
+        return this.sessionInfo.language;
     }
 
     workspaceFolder(): string | undefined {
@@ -176,13 +186,21 @@ export class Debugger {
         return undefined;
     }
 
+    private _isPythonError(type: string): boolean {
+        return (type === 'NameError' || type === 'AttributeError') && this.sessionInfo?.language === Language.Python;
+    }
+
+    private _isJSObject(type: string): boolean {
+        return type === 'object' && this.sessionInfo?.language === Language.JavaScript;
+    }
+
     async getType(expression: string): Promise<string | undefined> {
         let type = (await this.evaluate(expression))?.type;
-        // TODO: checking for language each time is quite heavy,
-        //       it could be done once when the session starts
-        if (type === 'object' && this.language() === Language.JavaScript) {
+        if (this._isPythonError(type))
+            return undefined;
+        if (this._isJSObject(type)) {
             const expr = await this.evaluate('(' + expression + ').constructor.name');
-            if (expr?.type !== undefined && expr?.result !== undefined) {
+            if (expr?.type !== undefined && expr?.result !== undefined) { // type === 'string'?
                 type = expr.result.substr(1, expr.result.length - 2);
             }            
         }
@@ -191,6 +209,8 @@ export class Debugger {
 
     async getValue(expression: string): Promise<string | undefined> {
         const result = await this.evaluate(expression);
+        if (this._isPythonError(result?.type))
+            return undefined;
         return result?.type ? result.result : undefined;
     }
 
@@ -198,11 +218,11 @@ export class Debugger {
         const expr = await this.evaluate(expression);
         const value = expr?.result;
         let type = expr?.type;
-        // TODO: checking for language each time is quite heavy,
-        //       it could be done once when the session starts
-        if (type === 'object' && this.language() === Language.JavaScript) {
+        if (this._isPythonError(type))
+            return undefined;
+        if (this._isJSObject(type)) {
             const expr = await this.evaluate('(' + expression + ').constructor.name');
-            if (expr?.type !== undefined && expr?.result !== undefined) {
+            if (expr?.type !== undefined && expr?.result !== undefined) { // type === 'string'?
                 type = expr.result.substr(1, expr.result.length - 2);
             }
         }
