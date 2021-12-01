@@ -41,7 +41,7 @@ This extension allows to display graphical representation of variables during de
   * `deque`, `list`
   * llist: `dllist`, `sllist`
 * 2D geometries
-  * Shapely: `LinearRing`, `LineString`, `Point`, `Polygon`
+  * Shapely: `GeometryCollection`, `LinearRing`, `LineString`, `Point`, `Polygon`
   * SymPy: `Point2D`, `Polygon`
 
 ##### User-defined types

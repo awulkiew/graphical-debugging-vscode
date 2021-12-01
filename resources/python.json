@@ -120,6 +120,23 @@
                 "container": { "name": "$this.interiors" }
             },
             "_comment": "Shapely module"
+        },
+        {
+            "type": "HeterogeneousGeometrySequence",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.__len__()"
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "GeometryCollection",
+            "kind": "geometrycollection",
+            "geometries": {
+                "container": { "name": "$this.geoms" }
+            },
+            "_comment": "Shapely module"
         }
     ]
 }

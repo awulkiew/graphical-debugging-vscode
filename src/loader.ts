@@ -565,6 +565,35 @@ export class Polygon extends Geometry {
     private _intLoad: Geometries | undefined = undefined;
 }
 
+export class GeometryCollection extends ContainerLoader {
+    constructor(private _container: Container) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        let drawables: draw.Drawable[] = [];        
+        for await (let elStr of this._container.elements(dbg, variable)) {
+            const elType = await dbg.getType(elStr);
+            if (elType === undefined)
+                return undefined;
+            const v = new Variable(elStr, elType);
+            let elLoad = this._loaders.get(elType);
+            if (elLoad === undefined) {
+                elLoad = await getLoader(dbg, v);
+                if (elLoad === undefined)
+                    return undefined;    
+                this._loaders.set(elType, elLoad);
+            }
+            const d = await elLoad.load(dbg, v);
+            if (d === undefined)
+                return undefined;
+            drawables.push(d);
+        }
+        return new draw.Drawables(drawables);
+    }
+
+    private _loaders: Map<string, Geometry> = new Map<string, Geometry>();
+}
+
 export class Types {
 
     *match(type: string, lang: debug.Language, kinds: string[] | undefined = undefined) {
@@ -734,7 +763,7 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             }
         }
         else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
-            if (entry.points && entry.points.container && entry.points.container.name) {
+            if (entry.points?.container?.name) {
                 const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
                 if (contExpr) {
                     if (entry.kind === 'linestring')
@@ -747,11 +776,11 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             }
         }
         else if (entry.kind === 'polygon') {
-            if (entry.exteriorring && entry.exteriorring.name) {
+            if (entry.exteriorring?.name) {
                 const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
                 if (extEval) {
                     let intEval = undefined;
-                    if (entry.interiorrings && entry.interiorrings.container && entry.interiorrings.container.name) {
+                    if (entry.interiorrings?.container?.name) {
                         intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
                     }
                     return new Polygon(extEval, intEval);
@@ -759,7 +788,7 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             }
         }
         else if (entry.kind === 'multilinestring') {
-            if (entry.linestrings && entry.linestrings.container && entry.linestrings.container.name) {
+            if (entry.linestrings?.container?.name) {
                 const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name);
                 if (contExpr) {
                     const contVar = contExpr.variable;
@@ -769,12 +798,23 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             }
         }
         else if (entry.kind === 'multipolygon') {
-            if (entry.polygons && entry.polygons.container && entry.polygons.container.name) {
+            if (entry.polygons?.container?.name) {
                 const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name);
                 if (contExpr) {
                     const contVar = contExpr.variable;
                     // TODO: only search for Container of Polygons
                     return await getLoader(dbg, contVar);
+                }
+            }
+        }
+        else if (entry.kind === 'geometrycollection') {
+            if (entry.geometries?.container?.name) {
+                const contExpr = await evaluateExpression(dbg, variable, entry.geometries.container.name);
+                if (contExpr) {
+                    const contVar = contExpr.variable;
+                    const contLoad = await getContainer(dbg, contExpr.variable);
+                    if (contLoad)
+                        return new GeometryCollection(contLoad);
                 }
             }
         }
