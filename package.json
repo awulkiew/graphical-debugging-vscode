@@ -12,10 +12,16 @@
 	"displayName": "Graphical Debugging",
 	"description": "Visualization of variables during debugging, e.g. Boost.Geometry models, containers of values, arrays of points, etc.",
 	"categories": [
-		"Debuggers", "Other", "Visualization"
+		"Debuggers",
+		"Other",
+		"Visualization"
 	],
 	"keywords": [
-		"debug", "debugging", "geometry", "plot", "visualization"
+		"debug",
+		"debugging",
+		"geometry",
+		"plot",
+		"visualization"
 	],
 	"icon": "resources/icon.png",
 	"repository": {
@@ -26,12 +32,11 @@
 		"url": "https://github.com/awulkiew/graphical-debugging-vscode/issues"
 	},
 	"homepage": "https://github.com/awulkiew/graphical-debugging-vscode/blob/master/README.md",
-
 	"main": "./out/extension.js",
 	"activationEvents": [
 		"onView:graphicalWatch",
 		"onDebug"
-	],	
+	],
 	"contributes": {
 		"views": {
 			"debug": [
@@ -130,7 +135,8 @@
 						"orthographic",
 						"robinson",
 						"stereographic",
-						"transverse mercator"],
+						"transverse mercator"
+					],
 					"enumDescriptions": [
 						"Lambert azimuthal equal-area projection (azimuthal, equal-area).",
 						"Azimuthal equidistant projection (azimuthal, equidistant).",
@@ -150,7 +156,7 @@
 						"Robinson projection (pseudocylindrical, compromise).",
 						"Stereographic projection (azimuthal, conformal).",
 						"Transverse Mercator projection (cylindrical, conformal)."
-					  ]
+					]
 				}
 			}
 		}
@@ -167,16 +173,16 @@
 		"test": "node ./out/test/runTest.js"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.61.0",
-		"@types/glob": "^7.1.4",
-		"@types/mocha": "^9.0.0",
-		"@types/node": "14.x",
+		"@types/glob": "^7.2.0",
+		"@types/mocha": "^9.1.0",
+		"@types/node": "^14.18.9",
+		"@types/vscode": "^1.63.1",
 		"@typescript-eslint/eslint-plugin": "^4.31.1",
 		"@typescript-eslint/parser": "^4.31.1",
+		"@vscode/test-electron": "^1.6.2",
 		"eslint": "^7.32.0",
 		"glob": "^7.1.7",
-		"mocha": "^9.1.1",
-		"typescript": "^4.4.3",
-		"@vscode/test-electron": "^1.6.2"
+		"mocha": "^9.2.0",
+		"typescript": "^4.5.5"
 	}
 }
