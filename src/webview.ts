@@ -95,7 +95,11 @@ export class Webview {
 								geo: {
 									bgcolor: '#0000',
 									projection: {
-										type: projection
+										type: projection,
+										rotation: {
+											lon: 0,
+											lat: 0
+										}
 									},
 									showocean: true,
 									oceancolor: '#0000',
@@ -136,7 +140,7 @@ export class Webview {
 							return plots;
 						}
 
-						var layout = getLayout('#888', '#888', '#888', 'orthographic');
+						var layout = getLayout('#888', '#888', '#888', 'orthographic', 0);
 						var config = {
 							modeBarButtonsToRemove: ['select', 'lasso', 'resetScale', 'toImage', 'sendDataToCloud'],
 							displaylogo: false,
@@ -150,8 +154,10 @@ export class Webview {
 						window.addEventListener('message', event => {
 							let layout = getLayout(event.data.color, event.data.gridcolor, event.data.activecolor, event.data.projection);
 							let plots = setupPlotElements(event.data.plots.length);
-							for (let i = 0 ; i < event.data.plots.length ; ++i)
+							for (let i = 0 ; i < event.data.plots.length ; ++i) {
+								layout.geo.projection.rotation.lon = event.data.plots[i].lonmid;
 								Plotly.newPlot(plots[i], event.data.plots[i].traces, layout, config);
+							}
 						});
 
 						const vscode = acquireVsCodeApi();

@@ -40,7 +40,9 @@ function createMessagePlot(message: any, system: draw.System): number {
 			return i;
 	message.plots.push({
 		system: systemStr,
-		traces: [] as any
+		traces: [] as any,
+		lonintervals: [] as any,
+		lonmid: 0
 	});
 	return message.plots.length - 1;
 }
@@ -79,6 +81,15 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 				trace.fillcolor = colorStr + '55';
 			trace.hoverinfo = d.system === draw.System.Geographic ? "lon+lat" : "x+y";
 			message.plots[plotId].traces.push(trace);
+		}
+		message.plots[plotId].lonintervals.push(d.lonInterval);
+	}
+
+	const geographicStr = systemName(draw.System.Geographic);
+	for (let p of message.plots) {
+		if (p.system === geographicStr) {
+			const loninterval = draw.lonInterval2(p.lonintervals);
+			p.lonmid = (loninterval[0] + loninterval[1]) / 2;
 		}
 	}
 

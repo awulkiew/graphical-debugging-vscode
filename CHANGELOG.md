@@ -23,7 +23,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Space between `>` is no longer required in C++ template definitions
 - Default dragmode changed to pan instead of zoom
 ### Known issues
-- Visualization is not centered on spherical/geographic primitives
 - Incorrect visualization of spherical/geographic polygons with holes
 
 ## [0.2.0]
