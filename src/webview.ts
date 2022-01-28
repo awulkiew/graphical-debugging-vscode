@@ -8,7 +8,8 @@ export class Webview {
 
 	showAndPostMessage(data: any, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Nine) {
 		if (this._panel) {
-			this._panel.reveal(viewColumn);
+			if (! this._panel.visible)
+				this._panel.reveal(viewColumn);
 			this._panel.webview.postMessage(data);
 		} else {
 			this._panel = vscode.window.createWebviewPanel(
