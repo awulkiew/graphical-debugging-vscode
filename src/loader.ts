@@ -475,6 +475,38 @@ export class PointsRange extends Geometry {
     private _pointsLoad: Points | undefined = undefined;
 }
 
+export class Segment extends Geometry {
+    constructor(private _p0Expr: EvaluatedExpression,
+                private _p1Expr: EvaluatedExpression) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const p0Str = this._p0Expr.expression.toString(variable);
+        const p0Var = new Variable(p0Str, this._p0Expr.type);
+        const p1Str = this._p1Expr.expression.toString(variable);
+        const p1Var = new Variable(p1Str, this._p1Expr.type);
+        if (this._p0Load === undefined) {
+            // TODO: only search for Points
+            const loader = await getLoader(dbg, p0Var);
+            if (loader instanceof Point)
+                this._p0Load = loader as Point;
+        }
+        if (this._p1Load === undefined) {
+            // TODO: only search for Points
+            const loader = await getLoader(dbg, p1Var);
+            if (loader instanceof Point)
+                this._p1Load = loader as Point;
+        }
+        const p0 = await this._p0Load?.load(dbg, p0Var) as draw.Point;
+        const p1 = await this._p1Load?.load(dbg, p1Var) as draw.Point;
+        if (p0 == undefined || p1 === undefined)
+            return undefined;
+        return new draw.Plot([p0.x, p1.x], [p0.y, p1.y], p0.system);
+    }
+    private _p0Load: Point | undefined = undefined;
+    private _p1Load: Point | undefined = undefined;
+}
+
 export class Linestring extends PointsRange {
     constructor(containerExpr: EvaluatedExpression) {
         super(containerExpr);
@@ -759,6 +791,15 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                 if (xEval && yEval) {
                     let su = _getSystemAndUnit(entry);
                     return new Point(xEval, yEval, su[0], su[1]);
+                }
+            }
+        }
+        else if (entry.kind === 'segment') {
+            if (entry.points?.p0 && entry.points?.p1) {
+                const p0Expr = await evaluateExpression(dbg, variable, entry.points.p0);
+                const p1Expr = await evaluateExpression(dbg, variable, entry.points.p1);
+                if (p0Expr && p1Expr) {
+                    return new Segment(p0Expr, p1Expr);
                 }
             }
         }
