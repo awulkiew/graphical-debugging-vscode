@@ -27,8 +27,8 @@ This extension allows to display graphical representation of variables during de
   * Boost.Units: `quantity`   
 * 2D values/geometries
   * STL: `complex`, `pair`
-  * Boost.Geometry: `linestring`, `multi_linestring`, `multi_point`, `multi_polygon`, `point`, `point_xy`, `point_xyz`, `polygon`, `ring`
-  * Boost.Polygon: `point_data`, `polygon_data`, `polygon_with_holes_data`
+  * Boost.Geometry: `linestring`, `multi_linestring`, `multi_point`, `multi_polygon`, `point`, `point_xy`, `point_xyz`, `polygon`, `ring`, `segment`
+  * Boost.Polygon: `point_data`, `polygon_data`, `polygon_with_holes_data`, `segment_data`
 
 ##### Javascript (node, chrome, msedge, pwa-node, pwa-chrome, pwa-msedge)
 
@@ -41,8 +41,9 @@ This extension allows to display graphical representation of variables during de
   * `deque`, `list`
   * llist: `dllist`, `sllist`
 * 2D geometries
-  * Shapely: `GeometryCollection`, `LinearRing`, `LineString`, `Point`, `Polygon`
-  * SymPy: `Point2D`, `Polygon`
+  * `tuple`
+  * Shapely: `GeometryCollection`, `LinearRing`, `LineString`, `MultiLineString`, `MultiPoint`, `MultiPolygon`, `Point`, `Polygon`
+  * SymPy: `Point2D`, `Polygon`, `Segment2D`
 
 ##### User-defined types
 
@@ -51,4 +52,5 @@ This extension allows to display graphical representation of variables during de
 
 #### Known issues
 
-The extension doesn't work for variables defined with `typedef` with GDB. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use of natvis files. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue.
+* The extension doesn't work for C++ variables defined with `typedef` with GDB, including classes defining member types, e.g. Boost.Geometry `polygon`. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use of natvis files. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue.
+* Geographic polygons with holes are visualized incorrectly if an interior ring is in the viewport and the whole exterior ring is outside. This is a side effect of a workaround of the lack of support of polygons with holes in Plotly.
