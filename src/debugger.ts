@@ -55,9 +55,9 @@ export class Debugger {
                             const event = message as DebugProtocol.Event;
                             if (event.event === 'stopped') {
                                 const threadId = (message as DebugProtocol.StoppedEvent).body.threadId;
-                                if (threadId) {
+                                if (threadId !== undefined) {
                                     const frameId = await this._frameId(session, threadId);
-                                    if (frameId) {
+                                    if (frameId != undefined) {
                                         this.sessionInfo = new SessionInfo(session, threadId, frameId);
                                         this._onStopped.fire();
                                     } else {
