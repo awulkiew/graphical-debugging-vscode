@@ -179,6 +179,14 @@
             }
         },
         {
+            "type": "boost::geometry::model::segment<.+>",
+            "kind": "segment",
+            "points": {
+                "p0": "$this.first",
+                "p1": "$this.second"
+            }
+        },
+        {
             "type": "boost::geometry::model::linestring<.+>",
             "kind": "linestring",
             "points": {
@@ -237,6 +245,14 @@
             "coordinates": {
                 "x": "$this.coords_[0]",
                 "y": "$this.coords_[1]"
+            }
+        },
+        {
+            "type": "boost::polygon::segment_data<.+>",
+            "kind": "segment",
+            "points": {
+                "p0": "$this.points_[0]",
+                "p1": "$this.points_[1]"
             }
         },
         {

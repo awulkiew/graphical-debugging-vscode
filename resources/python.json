@@ -51,6 +51,15 @@
             "_comment": "SymPy module"
         },
         {
+            "type": "Segment2D",
+            "kind": "segment",
+            "points": {
+                "p0": "$this.p1",
+                "p1": "$this.p2"
+            },
+            "_comment": "SymPy module"
+        },
+        {
             "type": "Polygon",
             "kind": "ring",
             "points": {
@@ -122,11 +131,44 @@
             "_comment": "Shapely module"
         },
         {
+            "type": "GeometrySequence",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.__len__()"
+            },
+            "_comment": "Shapely module"
+        },
+        {
             "type": "HeterogeneousGeometrySequence",
             "kind": "container",
             "array": {
                 "start": "$this",
                 "size": "$this.__len__()"
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "MultiPoint",
+            "kind": "multipoint",
+            "points": {
+                "container": { "name": "$this.geoms" }
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "MultiLineString",
+            "kind": "multilinestring",
+            "linestrings": {
+                "container": { "name": "$this.geoms" }
+            },
+            "_comment": "Shapely module"
+        },
+        {
+            "type": "MultiPolygon",
+            "kind": "multipolygon",
+            "polygons": {
+                "container": { "name": "$this.geoms" }
             },
             "_comment": "Shapely module"
         },
