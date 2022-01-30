@@ -665,16 +665,17 @@ export class Types {
         }
     }
 
+    // TODO: update separate files only if needed
+    // TODO: load language files only if they match currently debugged language
     update(dbg: debug.Debugger) {
-        // TODO: update only if needed, check modification time, esspecially for user-defined types
-        this._languages = new Map<debug.Language, Map<string, any[]>>();
-        this._languagesUD = new Map<debug.Language, Map<string, any[]>>();
-
         {
             const p = path.join(__filename, '..', '..', 'resources');
-            this._parseLanguages(this._languages, p);
+            const files = this._jsonFiles(p, this._files);
+            if (files[1]) { // modified
+                this._languages.clear();
+                this._parseLanguages(files[0], this._languages);
+            }
         }
-
         {
             let dir = vscode.workspace.getConfiguration().get<string>('graphicalDebugging.additionalTypesDirectory');
             let p: string | undefined = undefined;
@@ -683,15 +684,22 @@ export class Types {
                 if (workspaceDir)
                     p = path.join(workspaceDir, dir);
             }
-            else
+            else {
                 p = dir;
-            if (p !== undefined)
-                this._parseLanguages(this._languagesUD, p);
+            }
+            if (p !== undefined) {
+                const files = this._jsonFiles(p, this._filesUD);
+                if (files[1]) { // modified
+                    this._languagesUD.clear();
+                    this._parseLanguages(files[0], this._languagesUD);
+                }
+            }
         }
     }
 
-    private _parseLanguages(languages: Map<debug.Language, Map<string, any[]>>, directory: string) {
-        const files = this._parseFiles(directory);
+    private _parseLanguages(filePaths: string[],
+                            languages: Map<debug.Language, Map<string, any[]>>) {
+        const files = this._parseFiles(filePaths);
         for (const file of files) {
             const lang = this._stringToLanguage(file.language);
             if (lang === undefined)
@@ -714,25 +722,50 @@ export class Types {
         }
     }
 
-    private _parseFiles(directoryPath: string): any[] {
+    // Parse list of files
+    private _parseFiles(filePaths: string[]): any[] {
         let result: any[] = [];
+        for (const filePath of filePaths) {
+            try {
+                // TODO: In order to quickly check json files ideally
+                //       only the top level should be read and parsed.
+                const f = fs.readFileSync(filePath, 'utf-8');
+                const o = JSON.parse(f);
+                if (o.name === 'graphicaldebugging') {
+                    result.push(o);
+                }
+            } catch(err) {}
+        }
+        return result;
+    }
+
+    // Return list of json files in directory and a flag indicating whether any of them was modified
+    private _jsonFiles(directoryPath: string, filePathsMap: Map<string, number>): [string[], boolean] {
+        let result: any[] = [];
+        let modified = false;
         let fileNames: string[] = [];
         try {
             fileNames = fs.readdirSync(directoryPath);
         } catch(err) {}
         for (const fileName of fileNames) {
             if (fileName.endsWith('.json')) {
-                try {
-                    const p = path.join(directoryPath, fileName);
-                    const f = fs.readFileSync(p, 'utf-8');
-                    const o = JSON.parse(f);
-                    if (o.name === 'graphicaldebugging') {
-                        result.push(o);
-                    }
+                const p = path.join(directoryPath, fileName);
+                let stat = undefined;
+                try{
+                    stat = fs.statSync(p);
                 } catch(err) {}
+                if (stat?.isFile()) {
+                    result.push(p);
+                    const mtime = (stat.mtime as Date).getTime();
+                    const prevmtime = filePathsMap.get(p);
+                    if (prevmtime === undefined || prevmtime !== mtime) {
+                        filePathsMap.set(p, mtime);
+                        modified = true;
+                    }
+                }
             }
         }
-        return result;
+        return [result, modified];
     }
 
     private _stringToLanguage(name: string | undefined): debug.Language | undefined {
@@ -747,6 +780,8 @@ export class Types {
 
     private _languages: Map<debug.Language, Map<string, any[]>> = new Map<debug.Language, Map<string, any[]>>();
     private _languagesUD: Map<debug.Language, Map<string, any[]>> = new Map<debug.Language, Map<string, any[]>>();
+    private _files: Map<string, number> = new Map<string, number>();
+    private _filesUD: Map<string, number> = new Map<string, number>();
 }
 
 export let types: Types = new Types();
