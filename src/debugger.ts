@@ -143,7 +143,7 @@ export class Debugger {
             return undefined;
         const session = this.sessionInfo.session;
         const frameId = this.sessionInfo.frameId;
-        if (session.type.indexOf('cpp') >= 0) {
+        if (this.sessionInfo.language === Language.Cpp) {
             //const expr1 = await this._evaluate(session, '(unsigned int)((unsigned char)-1)', frameId);
             const expr2 = await this._evaluate(session, 'sizeof(void*)', frameId);
             if (expr2 === undefined || expr2.type === undefined)

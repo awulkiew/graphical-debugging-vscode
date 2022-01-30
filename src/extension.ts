@@ -109,14 +109,14 @@ export function activate(context: vscode.ExtensionContext) {
 	// TODO: get variables asynchroniously?
 	
 	debugHelper.onStopped(async () => {
-		const language = debugHelper.language();
-		const machineInfo = await debugHelper.machineInfo();
-		if (language)
-			console.log(language);
-		if (machineInfo) {
-			console.log('pointer size: ' + machineInfo.pointerSize.toString());
-			console.log(machineInfo.endianness === Endianness.Little ? 'little endian' : 'big endian');
-		}
+		// const language = debugHelper.language();
+		// const machineInfo = await debugHelper.machineInfo();
+		// if (language !== undefined)
+		// 	console.log(language);
+		// if (machineInfo) {
+		// 	console.log('pointer size: ' + machineInfo.pointerSize.toString());
+		// 	console.log(machineInfo.endianness === Endianness.Little ? 'little endian' : 'big endian');
+		// }
 
 		if (graphicalWatch.variables.length > 0)
 			load.types.update(debugHelper);
@@ -199,8 +199,6 @@ export function activate(context: vscode.ExtensionContext) {
 		const message = prepareMessage(drawableData, e);
 		webview.postMessage(message);
 	});
-
-	console.log('Congratulations, your extension is now active!');
 }
 
 export function deactivate() {
