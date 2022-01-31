@@ -53,4 +53,4 @@ This extension allows to display graphical representation of variables during de
 #### Known issues
 
 * The extension doesn't work for C++ variables defined with `typedef` with GDB, including classes defining member types, e.g. Boost.Geometry `polygon`. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use of natvis files. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue.
-* Geographic polygons with holes are visualized incorrectly if an interior ring is in the viewport and the whole exterior ring is outside. This is a side effect of a workaround of the lack of support of polygons with holes in Plotly.
+* Geographic polygons with holes are visualized incorrectly if an interior ring is in the viewport and the whole exterior ring is outside. This is a side effect of a workaround for an [issue in Plotly](https://github.com/plotly/plotly.js/issues/6044) which doesn't support geographic polygons with holes.
