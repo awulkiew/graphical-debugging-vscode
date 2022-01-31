@@ -21,6 +21,12 @@ export class Webview {
 					enableScripts: true,
 					localResourceRoots: [vscode.Uri.file(path.join(this._context.extensionPath, 'resources'))]
 				});
+			// this._panel.onDidChangeViewState(
+			// 	(e) => {
+			// 		// TODO: handle hiding and showing again here?
+			// 	},
+			// 	null,
+			// 	this._context.subscriptions);
 			this._panel.onDidDispose(
 				() => {
 					this._panel = undefined;
