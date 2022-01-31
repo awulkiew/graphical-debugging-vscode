@@ -5,6 +5,10 @@ This extension allows to display graphical representation of variables during de
 
 ![Graphical Debugging](resources/extension.png)
 
+#### Download
+
+You can download this extension from [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode) or [GitHub](https://github.com/awulkiew/graphical-debugging-vscode/releases).
+
 #### Instructions
 
 1. Place a breakpoint
