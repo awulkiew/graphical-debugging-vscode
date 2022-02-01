@@ -486,18 +486,8 @@ export class Segment extends Geometry {
         const p0Var = new Variable(p0Str, this._p0Expr.type);
         const p1Str = this._p1Expr.expression.toString(variable);
         const p1Var = new Variable(p1Str, this._p1Expr.type);
-        if (this._p0Load === undefined) {
-            // TODO: only search for Points
-            const loader = await getLoader(dbg, p0Var);
-            if (loader instanceof Point)
-                this._p0Load = loader as Point;
-        }
-        if (this._p1Load === undefined) {
-            // TODO: only search for Points
-            const loader = await getLoader(dbg, p1Var);
-            if (loader instanceof Point)
-                this._p1Load = loader as Point;
-        }
+        this._p0Load = await getPointLoaderIfUndefined(this._p0Load, dbg, p0Var);
+        this._p1Load = await getPointLoaderIfUndefined(this._p1Load, dbg, p1Var);
         const p0 = await this._p0Load?.load(dbg, p0Var) as draw.Point;
         const p1 = await this._p1Load?.load(dbg, p1Var) as draw.Point;
         if (p0 == undefined || p1 === undefined)
@@ -506,6 +496,16 @@ export class Segment extends Geometry {
     }
     private _p0Load: Point | undefined = undefined;
     private _p1Load: Point | undefined = undefined;
+}
+
+async function getPointLoaderIfUndefined(loader: Point | undefined, dbg: debug.Debugger, variable: Variable): Promise<Point | undefined>  {
+    if (loader === undefined) {
+        // TODO: only search for Points
+        const load = await getLoader(dbg, variable);
+        if (load instanceof Point)
+            loader = load as Point;
+    }
+    return loader;
 }
 
 export class Box extends Geometry {
@@ -518,51 +518,87 @@ export class Box extends Geometry {
         const minVar = new Variable(minStr, this._minExpr.type);
         const maxStr = this._maxExpr.expression.toString(variable);
         const maxVar = new Variable(maxStr, this._maxExpr.type);
-        if (this._minLoad === undefined) {
-            // TODO: only search for Points
-            const loader = await getLoader(dbg, minVar);
-            if (loader instanceof Point)
-                this._minLoad = loader as Point;
-        }
-        if (this._maxLoad === undefined) {
-            // TODO: only search for Points
-            const loader = await getLoader(dbg, maxVar);
-            if (loader instanceof Point)
-                this._maxLoad = loader as Point;
-        }
+        this._minLoad = await getPointLoaderIfUndefined(this._minLoad, dbg, minVar);
+        this._maxLoad = await getPointLoaderIfUndefined(this._maxLoad, dbg, maxVar);
         const min = await this._minLoad?.load(dbg, minVar) as draw.Point;
         const max = await this._maxLoad?.load(dbg, maxVar) as draw.Point;
         if (min == undefined || max === undefined)
-            return undefined;
-        // TODO: shouldn't this logic rather be implemented in draw?
-        const system = min.system;
-        if (system !== draw.System.Geographic) {
-            return new draw.Ring([min.x, min.x, max.x, max.x], [min.y, max.y, max.y, min.y], system, true);
-        }
-        else {
-            const miny = util.bounded(min.y, -90, 90);
-            const maxy = util.bounded(max.y, -90, 90);
-            let minx = min.x;
-            let maxx = max.x < min.x ? min.x + util.uLon(max.x - min.x) : max.x;
-            if (maxx - minx > 360)
-                maxx = minx + 360;
-            let xs: number[] = [minx];
-            let ys: number[] = [miny];
-            const fstep = maxy == -90 || maxy == 90 ? 361 : 2.5;
-            for (let x = minx; x < maxx; x += fstep) {
-                xs.push(x); ys.push(maxy);
-            }
-            xs.push(maxx); ys.push(maxy);
-            const bstep = miny == -90 || miny == 90 ? 361 : 2.5;
-            for (let x = maxx; x > minx; x -= bstep) {
-                xs.push(x); ys.push(miny);
-            }
-            xs.push(minx); ys.push(miny);
-            return new draw.Ring(xs, ys, system, true);
-        }
+            return undefined;        
+        return loadBox(min.x, min.y, max.x, max.y, min.system);
     }
     private _minLoad: Point | undefined = undefined;
     private _maxLoad: Point | undefined = undefined;
+}
+
+export class Box2 extends Geometry {
+    constructor(
+        private _minxEval: EvaluatedExpression,
+        private _minyEval: EvaluatedExpression,
+        private _maxxEval: EvaluatedExpression,
+        private _maxyEval: EvaluatedExpression,
+        private _system: draw.System,
+        private _unit: Unit) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const minxStr = this._minxEval.expression.toString(variable);
+        const minxVal = await dbg.getValue(minxStr);
+        if (minxVal === undefined)
+            return undefined;
+        const minyStr = this._minyEval.expression.toString(variable);
+        const minyVal = await dbg.getValue(minyStr);
+        if (minyVal === undefined)
+            return undefined;
+        const maxxStr = this._maxxEval.expression.toString(variable);
+        const maxxVal = await dbg.getValue(maxxStr);
+        if (maxxVal === undefined)
+            return undefined;
+        const maxyStr = this._maxyEval.expression.toString(variable);
+        const maxyVal = await dbg.getValue(maxyStr);
+        if (maxyVal === undefined)
+            return undefined;
+        let minx = parseFloat(minxVal);
+        let miny = parseFloat(minyVal);
+        let maxx = parseFloat(maxxVal);
+        let maxy = parseFloat(maxyVal);
+        // Convert radians to degrees if needed
+        if (this._unit === Unit.Radian) {
+            const r2d = 180 / Math.PI;
+            minx *= r2d;
+            miny *= r2d;
+            maxx *= r2d;
+            maxy *= r2d;
+        }
+        return loadBox(minx, miny, maxx, maxy, this._system);
+    }
+}
+
+// TODO: shouldn't this logic rather be implemented in draw?
+function loadBox(minx: number, miny: number, maxx: number, maxy: number, system: draw.System): draw.Ring {
+    if (system !== draw.System.Geographic) {
+        return new draw.Ring([minx, minx, maxx, maxx], [miny, maxy, maxy, miny], system, true);
+    }
+    else {
+        miny = util.bounded(miny, -90, 90);
+        maxy = util.bounded(maxy, -90, 90);
+        if (maxx < minx)
+            maxx = minx + util.uLon(maxx - minx);
+        if (maxx - minx > 360)
+            maxx = minx + 360;
+        let xs: number[] = [minx];
+        let ys: number[] = [miny];
+        const fstep = maxy == -90 || maxy == 90 ? 361 : 2.5;
+        for (let x = minx; x < maxx; x += fstep) {
+            xs.push(x); ys.push(maxy);
+        }
+        xs.push(maxx); ys.push(maxy);
+        const bstep = miny == -90 || miny == 90 ? 361 : 2.5;
+        for (let x = maxx; x > minx; x -= bstep) {
+            xs.push(x); ys.push(miny);
+        }
+        xs.push(minx); ys.push(miny);
+        return new draw.Ring(xs, ys, system, true);
+    }
 }
 
 export class Linestring extends PointsRange {
@@ -903,6 +939,18 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                     const maxExpr = await evaluateExpression(dbg, variable, entry.points.max);
                     if (minExpr && maxExpr) {
                         return new Box(minExpr, maxExpr);
+                    }
+                }
+            }
+            else if (entry.coordinates !== undefined) {
+                if (entry.coordinates.minx && entry.coordinates.miny && entry.coordinates.maxx && entry.coordinates.maxy) {
+                    const minxEval = await evaluateExpression(dbg, variable, entry.coordinates.minx);
+                    const minyEval = await evaluateExpression(dbg, variable, entry.coordinates.miny);
+                    const maxxEval = await evaluateExpression(dbg, variable, entry.coordinates.maxx);
+                    const maxyEval = await evaluateExpression(dbg, variable, entry.coordinates.maxy);
+                    if (minxEval && minyEval && maxxEval && maxyEval) {
+                        let su = _getSystemAndUnit(entry);
+                        return new Box2(minxEval, minyEval, maxxEval, maxyEval, su[0], su[1]);
                     }
                 }
             }
