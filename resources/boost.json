@@ -264,6 +264,17 @@
             }
         },
         {
+            "type": "boost::polygon::rectangle_data<.+>",
+            "kind": "box",
+            "system": "cartesian",
+            "coordinates": {
+                "minx": "$this.ranges_[0].coords_[0]",
+                "miny": "$this.ranges_[1].coords_[0]",
+                "maxx": "$this.ranges_[0].coords_[1]",
+                "maxy": "$this.ranges_[1].coords_[1]"
+            }
+        },
+        {
             "type": "boost::polygon::polygon_data<.+>",
             "kind": "ring",
             "points": {
