@@ -1,10 +1,11 @@
-import * as vscode from 'vscode';
 import { GraphicalWatch, GraphicalWatchEventData, GraphicalWatchEventType, GraphicalWatchVariable } from './graphicalwatch';
 import { Debugger, Endianness } from './debugger';
 import { Webview } from './webview';
-import * as load from './loader'
-import * as draw from './drawable'
 import * as colors from './colors.json'
+import * as draw from './drawable'
+import * as load from './loader'
+import * as util from './util'
+import * as vscode from 'vscode';
 
 
 async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<draw.PlotlyData> {
@@ -88,7 +89,7 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 	const geographicStr = systemName(draw.System.Geographic);
 	for (let p of message.plots) {
 		if (p.system === geographicStr) {
-			const loninterval = draw.lonInterval2(p.lonintervals);
+			const loninterval = util.lonInterval2(p.lonintervals);
 			p.lonmid = (loninterval[0] + loninterval[1]) / 2;
 		}
 	}

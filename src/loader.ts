@@ -3,6 +3,7 @@ import * as draw from './drawable'
 import * as path from 'path';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
+import * as util from './util'
 
 function parseTParams(type: string, beg: string = '<', end: string = '>', sep: string = ',') : string[] {
     let result: string[] = [];
@@ -507,6 +508,63 @@ export class Segment extends Geometry {
     private _p1Load: Point | undefined = undefined;
 }
 
+export class Box extends Geometry {
+    constructor(private _minExpr: EvaluatedExpression,
+                private _maxExpr: EvaluatedExpression) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const minStr = this._minExpr.expression.toString(variable);
+        const minVar = new Variable(minStr, this._minExpr.type);
+        const maxStr = this._maxExpr.expression.toString(variable);
+        const maxVar = new Variable(maxStr, this._maxExpr.type);
+        if (this._minLoad === undefined) {
+            // TODO: only search for Points
+            const loader = await getLoader(dbg, minVar);
+            if (loader instanceof Point)
+                this._minLoad = loader as Point;
+        }
+        if (this._maxLoad === undefined) {
+            // TODO: only search for Points
+            const loader = await getLoader(dbg, maxVar);
+            if (loader instanceof Point)
+                this._maxLoad = loader as Point;
+        }
+        const min = await this._minLoad?.load(dbg, minVar) as draw.Point;
+        const max = await this._maxLoad?.load(dbg, maxVar) as draw.Point;
+        if (min == undefined || max === undefined)
+            return undefined;
+        // TODO: shouldn't this logic rather be implemented in draw?
+        const system = min.system;
+        if (system !== draw.System.Geographic) {
+            return new draw.Ring([min.x, min.x, max.x, max.x], [min.y, max.y, max.y, min.y], system, true);
+        }
+        else {
+            const miny = util.bounded(min.y, -90, 90);
+            const maxy = util.bounded(max.y, -90, 90);
+            let minx = min.x;
+            let maxx = max.x < min.x ? min.x + util.uLon(max.x - min.x) : max.x;
+            if (maxx - minx > 360)
+                maxx = minx + 360;
+            let xs: number[] = [minx];
+            let ys: number[] = [miny];
+            const fstep = maxy == -90 || maxy == 90 ? 361 : 2.5;
+            for (let x = minx; x < maxx; x += fstep) {
+                xs.push(x); ys.push(maxy);
+            }
+            xs.push(maxx); ys.push(maxy);
+            const bstep = miny == -90 || miny == 90 ? 361 : 2.5;
+            for (let x = maxx; x > minx; x -= bstep) {
+                xs.push(x); ys.push(miny);
+            }
+            xs.push(minx); ys.push(miny);
+            return new draw.Ring(xs, ys, system, true);
+        }
+    }
+    private _minLoad: Point | undefined = undefined;
+    private _maxLoad: Point | undefined = undefined;
+}
+
 export class Linestring extends PointsRange {
     constructor(containerExpr: EvaluatedExpression) {
         super(containerExpr);
@@ -835,6 +893,17 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                 const p1Expr = await evaluateExpression(dbg, variable, entry.points.p1);
                 if (p0Expr && p1Expr) {
                     return new Segment(p0Expr, p1Expr);
+                }
+            }
+        }
+        else if (entry.kind === 'box') {
+            if (entry.points !== undefined) {
+                if (entry.points.min && entry.points.max) {
+                    const minExpr = await evaluateExpression(dbg, variable, entry.points.min);
+                    const maxExpr = await evaluateExpression(dbg, variable, entry.points.max);
+                    if (minExpr && maxExpr) {
+                        return new Box(minExpr, maxExpr);
+                    }
                 }
             }
         }
