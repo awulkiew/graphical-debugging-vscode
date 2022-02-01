@@ -204,6 +204,7 @@
         {
             "type": "boost::geometry::model::ring<.+>",
             "kind": "ring",
+            "cw": "$T1",
             "points": {
                 "container": { "name": "*($T3<$T0,$T4<$T0>>*)(&$this)" }
             }

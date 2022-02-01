@@ -186,6 +186,36 @@ async function evaluateExpression(dbg: debug.Debugger, variable: Variable, expre
     return vt !== undefined ? new EvaluatedExpression(expr, str, vt[1]) : undefined;
 }
 
+function getValueFromExpressionStr(dbg: debug.Debugger, str: string): number | boolean | undefined {
+    const language = dbg.language();
+    if (language != undefined) {
+        if (language === debug.Language.Cpp || language === debug.Language.JavaScript || language === debug.Language.Java) {
+            if (str === 'true')
+                return true;
+            else if (str === 'false')
+                return false;
+        }
+        else if (language === debug.Language.Python) {
+            if (str === 'True')
+                return true;
+            else if (str === 'False')
+                return false;
+        }
+    }
+    const n = parseFloat(str);
+    return isNaN(n) ? undefined : n;
+}
+
+async function getValueOrEvaluateExpression(dbg: debug.Debugger, variable: Variable, expression: string): Promise<EvaluatedExpression | number | boolean | undefined> {
+	const expr = new Expression(expression);
+	const str = expr.toString(variable);
+    const val = getValueFromExpressionStr(dbg, str);
+    if (val !== undefined)
+        return val;
+	const vt = await dbg.getValueAndType(str);
+    return vt !== undefined ? new EvaluatedExpression(expr, str, vt[1]) : undefined;
+}
+
 // Various Containers
 
 export class Container {
@@ -608,15 +638,48 @@ export class Linestring extends PointsRange {
 }
 
 export class Ring extends PointsRange {
-    constructor(containerExpr: EvaluatedExpression) {
+    constructor(containerExpr: EvaluatedExpression,
+                private _orientation: EvaluatedExpression | number | boolean | undefined = undefined,
+                private _cw: boolean = true) {
         super(containerExpr);
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const plot = await super.load(dbg, variable);
-        if (plot instanceof draw.Plot && plot.xs)
+        if (plot instanceof draw.Plot && plot.xs) {
+            const cw = await this._isCw(dbg, variable);
+            // TODO: This doesn't work well with classes like Shapely Polygon
+            //       where is_ccw member indicates the actual order of internal rings.
+            //       Such rings should be reversed based on the exterior ring.
+            //       Here rings are reversed locally.
+            if (! cw) {
+                plot.xs.reverse();
+                plot.ys.reverse();
+            }
             return new draw.Ring(plot.xs, plot.ys, plot.system);
+        }
         else
             return undefined;
+    }
+
+    async _isCw(dbg: debug.Debugger, variable: Variable): Promise<boolean> {
+        if (this._orientation !== undefined) {
+            let flag: number | boolean | undefined = undefined;
+            if (this._orientation instanceof EvaluatedExpression) {
+                const str = (this._orientation as EvaluatedExpression).expression.toString(variable);
+                const val = await dbg.getValue(str);
+                if (val !== undefined)
+                    flag = getValueFromExpressionStr(dbg, val);
+            }
+            else
+                flag = this._orientation;
+
+            if (flag !== undefined) {
+                const is_false = flag === 0 || flag === false;
+                if (this._cw && is_false || !this._cw && !is_false)
+                    return false;
+            }
+        }
+        return true;
     }
 }
 
@@ -653,7 +716,8 @@ export class Polygon extends Geometry {
         if (!(extRing instanceof draw.Ring))
             return undefined;
         if (this._intEval === undefined)
-            return new draw.Polygon(extRing)
+            return new draw.Polygon(extRing);
+        const isCw = extRing;
         // TODO: Get Container loader and check the size here to avoid
         //       accessing element of empty container.
         const intStr = this._intEval.expression.toString(variable);
@@ -961,8 +1025,19 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                 if (contExpr) {
                     if (entry.kind === 'linestring')
                         return new Linestring(contExpr);
-                    else if (entry.kind === 'ring')
-                        return new Ring(contExpr);
+                    else if (entry.kind === 'ring') {
+                        let orientation = undefined;
+                        let cw = true;
+                        if (entry.cw !== undefined) {
+                            orientation = await getValueOrEvaluateExpression(dbg, variable, entry.cw);
+                            cw = true;
+                        }
+                        else if (entry.ccw !== undefined) {
+                            orientation = await getValueOrEvaluateExpression(dbg, variable, entry.ccw);
+                            cw = false;
+                        }
+                        return new Ring(contExpr, orientation, cw);
+                    }
                     else
                         return new MultiPoint(contExpr);
                 }
