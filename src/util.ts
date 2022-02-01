@@ -66,13 +66,22 @@ export function lonInterval2(intervals: [number, number][] | undefined): [number
         const udmin = uLon(intervals[i][1] - min);
         const udmax = uLon(max - intervals[i][0]);
         // if the interval is outside
-        if (udmin > ud || udmax > ud) {
-            if (udmin > ud)
+        if (udmin > ud && udmax > ud) {
+            if (udmin < udmax)
                 max = intervals[i][1];
-            if (udmax > ud)
+            else
                 min = intervals[i][0];
-            ud = uLon(max - min);
         }
+        else if (udmin > ud)
+            max = intervals[i][1];
+        else if (udmax > ud)
+            min = intervals[i][0];
+        if (udmin > ud || udmax > ud)
+            ud = uLon(max - min);
     }
+    min = sLon(min);
+    max = sLon(max);
+    if (max < min)
+        max += 360;
     return [min, max];
 }
