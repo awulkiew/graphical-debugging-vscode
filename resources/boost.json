@@ -194,6 +194,14 @@
             }
         },
         {
+            "type": "boost::geometry::model::box<.+>",
+            "kind": "box",
+            "points": {
+                "min": "$this.m_min_corner",
+                "max": "$this.m_max_corner"
+            }
+        },
+        {
             "type": "boost::geometry::model::ring<.+>",
             "kind": "ring",
             "points": {
