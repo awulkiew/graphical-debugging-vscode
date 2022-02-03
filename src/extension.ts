@@ -89,8 +89,8 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 	const geographicStr = systemName(draw.System.Geographic);
 	for (let p of message.plots) {
 		if (p.system === geographicStr) {
-			const loninterval = util.lonInterval2(p.lonintervals);
-			p.lonmid = (loninterval[0] + loninterval[1]) / 2;
+			const loninterval = util.LonInterval.fromIntervals(p.lonintervals);
+			p.lonmid = (loninterval.min + loninterval.max) / 2;
 		}
 	}
 

@@ -6,12 +6,12 @@ export class PlotlyData {
     constructor(
         public traces: any[],
         public system: System,
-        public lonInterval: [number, number],
+        public lonInterval: util.LonInterval,
         public colorId: number)
     {}
 
     static empty(colorId: number) {
-        return new PlotlyData([], System.None, [0, 0], colorId);
+        return new PlotlyData([], System.None, new util.LonInterval(0, 0), colorId);
     }
 }
 
@@ -64,7 +64,7 @@ export class Plot extends Drawable {
             result.traces = [trace];
         }
         if (this.system === System.Geographic)
-            result.lonInterval = util.lonInterval(this.xs);
+            result.lonInterval = util.LonInterval.fromPoints(this.xs);
         return result;
     }
 };
@@ -75,7 +75,7 @@ export class Drawables extends Drawable {
     }
     toPlotly(colorId: number): PlotlyData {
         let result = PlotlyData.empty(colorId);
-        let intervals: [number, number][] = [];
+        let intervals: util.LonInterval[] = [];
         for (let drawable of this.drawables) {
             const data = drawable.toPlotly(colorId);
             if (result.system === System.None)
@@ -85,7 +85,7 @@ export class Drawables extends Drawable {
             if (data.system === System.Geographic)
                 intervals.push(data.lonInterval);
         }
-        result.lonInterval = util.lonInterval2(intervals);
+        result.lonInterval = util.LonInterval.fromIntervals(intervals);
         return result;
     }
 };
@@ -114,7 +114,7 @@ export class Point extends Geometry {
                 type: "scattergeo",
                 mode: "markers"
             };
-        return new PlotlyData([trace], this.system, [this.x, this.x], colorId);
+        return new PlotlyData([trace], this.system, new util.LonInterval(this.x, this.x), colorId);
     }
 }
 
@@ -150,7 +150,7 @@ export class Ring extends Drawable {
                 fill: 'toself'
             }];
         if (this.system === System.Geographic)
-            result.lonInterval = util.lonInterval(this.xs);
+            result.lonInterval = util.LonInterval.fromPoints(this.xs);
         return result;
     }
 };

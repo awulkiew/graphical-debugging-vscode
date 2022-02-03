@@ -603,7 +603,8 @@ export class Box2 extends Geometry {
     }
 }
 
-// TODO: shouldn't this logic rather be implemented in draw?
+// TODO: This way the longitude interval has to be calcualted from Ring points
+// TODO: This logic should rather be implemented in draw
 function loadBox(minx: number, miny: number, maxx: number, maxy: number, system: draw.System): draw.Ring {
     if (system !== draw.System.Geographic) {
         return new draw.Ring([minx, minx, maxx, maxx], [miny, maxy, maxy, miny], system, true);
