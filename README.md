@@ -53,7 +53,7 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 
 ##### User-defined types
 
-Users can define their types in `*.json` files which can be placed e.g. in the workspace. The following file defines `Point` C++ type containing `x` and `y` members.
+You can define your types in `*.json` files which can be placed e.g. in the workspace. The following file defines `Point` C++ type containing `x` and `y` members.
 ```
 {
     "name": "graphicaldebugging",
@@ -79,7 +79,7 @@ The directory containing user files can be defined in settings, by default it is
 
 By default the extension doesn't work for C++ `typedef`s with GDB and LLDB. It's because these debuggers don't return the original types which is how types are defined in this extension. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use of natvis files in VSCode. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue automatically. For now there is only manual workaround.
 
-Users of these debuggers can define type aliases for `typedef`s used in their code. It can be done in the same `*.json` files as described above. For example the following aliases:
+If you use GDB or LLDB you can define type aliases used in your code. It can be done in the same `*.json` files as described above. For example the following aliases:
 ```
 namespace bg = boost::geometry;
 using point_t = bg::model::point<double, 2, bg::cs::cartesian>;
