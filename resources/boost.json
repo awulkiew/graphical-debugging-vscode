@@ -212,11 +212,16 @@
         {
             "type": "boost::geometry::model::polygon<.+>",
             "kind": "polygon",
-            "exteriorring": { "name": "$this.m_outer" },
-            "interiorrings": {
-                "container": { "name": "$this.m_inners" }
+            "exteriorring": {
+                "name": "$this.m_outer",
+                "type": "boost::geometry::model::ring<$T0,$T1,$T2,$T3,$T5>"
             },
-            "_comment": "This doesn't work with GDB right now because the types of members are typedefs"
+            "interiorrings": {
+                "container": {
+                    "name": "$this.m_inners",
+                    "type": "$T4<boost::geometry::model::ring<$T0,$T1,$T2,$T3,$T5>,$T6<boost::geometry::model::ring<$T0,$T1,$T2,$T3,$T5>>>"
+                }
+            }
         },
         {
             "type": "boost::geometry::model::multi_point<.+>",

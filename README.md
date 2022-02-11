@@ -17,7 +17,7 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 
 #### Supported types
 
-##### C/C++ (cppvsdbg, cppdbg)
+##### C/C++ (cppdbg, cppvsdbg, lldb)
 
 * Containers of values, points and other geometries
   * C-style array
@@ -34,7 +34,7 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
   * Boost.Geometry: `box`, `linestring`, `multi_linestring`, `multi_point`, `multi_polygon`, `point`, `point_xy`, `point_xyz`, `polygon`, `ring`, `segment`
   * Boost.Polygon: `point_data`, `polygon_data`, `polygon_with_holes_data`, `rectangle_data`, `segment_data`
 
-##### Javascript (node, chrome, msedge, pwa-node, pwa-chrome, pwa-msedge)
+##### Javascript (chrome, msedge, node, pwa-node, pwa-chrome, pwa-msedge)
 
 * Containers of values, points and other geometries
   * `Array`

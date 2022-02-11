@@ -41,12 +41,29 @@ function parseTParams(type: string, beg: string = '<', end: string = '>', sep: s
                 ++param_first;
             while (param_first < param_last && type[param_last - 1] === ' ')
                 --param_last;
-            result.push(type.substr(param_first, param_last - param_first));
+            result.push(type.substring(param_first, param_last));
             param_first = -1;
             param_last = -1;
         }
 
         ++index;
+    }
+    return result;
+}
+
+function addSpacesInTemplates(str: string): string {
+    let result = '';
+    let p = '';
+    for (let c of str) {
+        if (c === '>') {
+            if (p === '>')
+                result += ' >';
+            else
+                result += '>';
+        }
+        else
+            result += c;
+        p = c;
     }
     return result;
 }
@@ -145,24 +162,7 @@ export class Expression
         }
         // TODO: do this only for C++ ?
         // It is possible that this should depend on the debugger
-        return this._addSpaces(result);
-    }
-
-    private _addSpaces(str: string): string {
-        let result = '';
-        let p = '';
-        for (let c of str) {
-            if (c === '>') {
-                if (p === '>')
-                    result += ' >';
-                else
-                    result += '>';
-            }
-            else
-                result += c;
-            p = c;
-        }
-        return result;
+        return addSpacesInTemplates(result);
     }
 
     private _parts : IExpressionPart[] = [];
@@ -179,11 +179,22 @@ class EvaluatedExpression {
     get variable(): Variable { return new Variable(this.name, this.type); }
 }
 
-async function evaluateExpression(dbg: debug.Debugger, variable: Variable, expression: string): Promise<EvaluatedExpression | undefined> {
-	const expr = new Expression(expression);
-	const str = expr.toString(variable);
-	const vt = await dbg.getValueAndType(str);
-    return vt !== undefined ? new EvaluatedExpression(expr, str, vt[1]) : undefined;
+async function evaluateExpression(dbg: debug.Debugger, variable: Variable, expressionName: string, expressionType: string | undefined = undefined): Promise<EvaluatedExpression | undefined> {
+	const expr = new Expression(expressionName);
+    const str = expr.toString(variable);
+    // Technically if expressionType is passed we don't have to evaluate the expression because
+    // the type is known. But right now this function is used to check if a type contains members
+    // defined in json file. So get the value anyway and after that alter the type.
+    let vt = await dbg.getValueAndType(str);
+    if (vt === undefined)
+        return undefined;
+    if (expressionType !== undefined) {
+        const typeExpr = new Expression(expressionType);
+        const type = typeExpr.toString(variable);
+        if (type !== undefined && type !== '')
+            vt[1] = type;
+    }
+    return new EvaluatedExpression(expr, str, vt[1]);
 }
 
 function getValueFromExpressionStr(dbg: debug.Debugger, str: string): number | boolean | undefined {
@@ -785,7 +796,20 @@ export class GeometryCollection extends ContainerLoader {
     private _loaders: Map<string, Geometry> = new Map<string, Geometry>();
 }
 
+class LanguageTypes {
+    public kinds: Map<string, any[]> = new Map<string, any[]>();
+    public aliases: Map<string, string[]> = new Map<string, string[]>();
+}
+
 export class Types {
+
+    *matchWithAliases(type: string, lang: debug.Language, kinds: string[] | undefined = undefined) {
+        for (const entry of this.match(type, lang, kinds))
+            yield [entry, type];
+        for (const alias of this.aliases(type, lang))
+            for (const entry of this.match(alias, lang, kinds))
+                yield [entry, alias];
+    }
 
     *match(type: string, lang: debug.Language, kinds: string[] | undefined = undefined) {
         for (const entry of this.get(lang, kinds))
@@ -793,28 +817,45 @@ export class Types {
                 yield entry;
     }
 
-    *get(lang: debug.Language, kinds: string[] | undefined = undefined) {
+    // Technically this function returns original types as defined in the json file, not aliases
+    private *aliases(type: string, lang: debug.Language) {
+        for (const alias of this._aliases(this._languages, type, lang))
+            yield alias;
+        for (const alias of this._aliases(this._languagesUD, type, lang))
+            yield alias;
+    }
+
+    private *get(lang: debug.Language, kinds: string[] | undefined = undefined) {
         for (const type of this._get(this._languages, lang, kinds))
             yield type;
         for (const type of this._get(this._languagesUD, lang, kinds))
             yield type;
     }
 
-    private *_get(map: Map<debug.Language, Map<string, any[]>>, language: debug.Language, kinds: string[] | undefined = undefined) {
-        if (language === undefined)
+    private *_aliases(map: Map<debug.Language, LanguageTypes>, type: string, lang: debug.Language) {
+        const lt = map.get(lang);
+        if (lt === undefined)
             return;
-        const ks = map.get(language);
-        if (ks === undefined)
+        const aliases = lt.aliases.get(type);
+        if (aliases === undefined)
+            return;
+        for (const alias of aliases)
+            yield alias;
+    }
+
+    private *_get(map: Map<debug.Language, LanguageTypes>, language: debug.Language, kinds: string[] | undefined = undefined) {
+        const lt = map.get(language);
+        if (lt === undefined)
             return;
         if (kinds === undefined) {
-            for (const k of ks) {
+            for (const k of lt.kinds) {
                 for (const t of k[1]) {
                     yield t;
                 }
             }
         } else {
             for (const kind of kinds) {
-                const k = ks.get(kind);
+                const k = lt.kinds.get(kind);
                 if (k !== undefined) {
                     for (const t of k) {
                         yield t;
@@ -857,26 +898,41 @@ export class Types {
     }
 
     private _parseLanguages(filePaths: string[],
-                            languages: Map<debug.Language, Map<string, any[]>>) {
+                            languages: Map<debug.Language, LanguageTypes>) {
         const files = this._parseFiles(filePaths);
         for (const file of files) {
             const lang = this._stringToLanguage(file.language);
             if (lang === undefined)
                 continue;
             if (! languages.has(lang))
-                languages.set(lang, new Map<string, any[]>());
+                languages.set(lang, new LanguageTypes());
             let language = languages.get(lang);
             if (language === undefined) // silence TS
                 continue;
-            for (const type of file.types) {
-                if (type.kind === undefined)
-                    continue;
-                if (! language.has(type.kind))
-                    language.set(type.kind, []);
-                let kind = language.get(type.kind);
-                if (kind === undefined) // silence TS
-                    continue;
-                kind.push(type);
+            if (file.types !== undefined) {
+                for (const type of file.types) {
+                    if (type.kind === undefined)
+                        continue;
+                    if (! language.kinds.has(type.kind))
+                        language.kinds.set(type.kind, []);
+                    let types = language.kinds.get(type.kind);
+                    if (types === undefined) // silence TS
+                        continue;
+                    types.push(type);
+                }
+            }
+            if (file.aliases !== undefined) {
+                for (const alias of file.aliases) {
+                    if (alias.name === undefined)
+                        continue;
+                    if (! language.aliases.has(alias.name))
+                        language.aliases.set(alias.name, []);
+                    let aliases = language.aliases.get(alias.name);
+                    if (aliases === undefined) // silence TS
+                        continue;
+                    const typeWithSpaces = addSpacesInTemplates(alias.type);
+                    aliases.push(typeWithSpaces);
+                }
             }
         }
     }
@@ -937,8 +993,8 @@ export class Types {
         }
     }
 
-    private _languages: Map<debug.Language, Map<string, any[]>> = new Map<debug.Language, Map<string, any[]>>();
-    private _languagesUD: Map<debug.Language, Map<string, any[]>> = new Map<debug.Language, Map<string, any[]>>();
+    private _languages: Map<debug.Language, LanguageTypes> = new Map<debug.Language, LanguageTypes>();
+    private _languagesUD: Map<debug.Language, LanguageTypes> = new Map<debug.Language, LanguageTypes>();
     private _files: Map<string, number> = new Map<string, number>();
     private _filesUD: Map<string, number> = new Map<string, number>();
 }
@@ -954,7 +1010,10 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
     if (lang === undefined)
         return undefined;
 
-    for (const entry of types.match(variable.type, lang)) {
+    const variableType = variable.type;
+
+    for (const [entry, type] of types.matchWithAliases(variableType, lang)) {
+        variable.type = type; // If alias is matched then the type has to be changed
         if (entry.kind === 'container') {
             const container: Container | undefined = await _getContainer(dbg, variable, entry);
             if (container) {
@@ -1022,7 +1081,7 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
         }
         else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
             if (entry.points?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name);
+                const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name, entry.points.container.type);
                 if (contExpr) {
                     if (entry.kind === 'linestring')
                         return new Linestring(contExpr);
@@ -1046,11 +1105,11 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
         }
         else if (entry.kind === 'polygon') {
             if (entry.exteriorring?.name) {
-                const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name);
+                const extEval = await evaluateExpression(dbg, variable, entry.exteriorring.name, entry.exteriorring.type);
                 if (extEval) {
                     let intEval = undefined;
                     if (entry.interiorrings?.container?.name) {
-                        intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name);
+                        intEval = await evaluateExpression(dbg, variable, entry.interiorrings.container.name, entry.interiorrings.container.type);
                     }
                     return new Polygon(extEval, intEval);
                 }
@@ -1058,7 +1117,7 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
         }
         else if (entry.kind === 'multilinestring') {
             if (entry.linestrings?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name);
+                const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name, entry.linestrings.container.type);
                 if (contExpr) {
                     const contVar = contExpr.variable;
                     // TODO: only search for Container of Linestrings
@@ -1068,7 +1127,7 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
         }
         else if (entry.kind === 'multipolygon') {
             if (entry.polygons?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name);
+                const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name, entry.polygons.container.type);
                 if (contExpr) {
                     const contVar = contExpr.variable;
                     // TODO: only search for Container of Polygons
@@ -1078,7 +1137,7 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
         }
         else if (entry.kind === 'geometrycollection') {
             if (entry.geometries?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.geometries.container.name);
+                const contExpr = await evaluateExpression(dbg, variable, entry.geometries.container.name, entry.geometries.container.type);
                 if (contExpr) {
                     const contVar = contExpr.variable;
                     const contLoad = await getContainer(dbg, contExpr.variable);
@@ -1097,7 +1156,10 @@ async function getContainer(dbg: debug.Debugger, variable: Variable): Promise<Co
     if (lang === undefined)
         return undefined;
 
-    for (const entry of types.match(variable.type, lang, ['container'])) {
+    const variableType = variable.type;
+
+    for (const [entry, type] of types.matchWithAliases(variableType, lang, ['container'])) {
+        variable.type = type;
         const container = await _getContainer(dbg, variable, entry);
         if (container)
             return container;
@@ -1112,7 +1174,10 @@ async function getValue(dbg: debug.Debugger, variable: Variable): Promise<Value 
     if (lang === undefined)
         return undefined;
 
-    for (const entry of types.match(variable.type, lang, ['value'])) {
+    const variableType = variable.type;
+
+    for (const [entry, type] of types.matchWithAliases(variableType, lang, ['value'])) {
+        variable.type = type;
         const value = await _getValue(dbg, variable, entry);
         if (value)
             return value;

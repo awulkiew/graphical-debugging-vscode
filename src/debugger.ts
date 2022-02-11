@@ -14,7 +14,7 @@ export class SessionInfo {
         const sessionType = this.session.type;
         if (sessionType === undefined)
             return undefined;
-        if (['cppvsdbg', 'cppdbg'].includes(sessionType))
+        if (['cppvsdbg', 'cppdbg', 'lldb'].includes(sessionType))
             return Language.Cpp;
         else if (sessionType === 'python')
             return Language.Python;
