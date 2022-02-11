@@ -1,6 +1,6 @@
 {
 	"name": "graphicaldebugging-vscode",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"publisher": "AdamWulkiewicz",
 	"author": {
 		"name": "Adam Wulkiewicz"
@@ -12,15 +12,14 @@
 	"displayName": "Graphical Debugging",
 	"description": "Visualization of variables during debugging, e.g. Boost.Geometry models, containers of values, arrays of points, etc.",
 	"categories": [
+		"Visualization",
 		"Debuggers",
-		"Other",
-		"Visualization"
+		"Other"		
 	],
 	"keywords": [
-		"debug",
-		"debugging",
-		"geometry",
-		"plot",
+		"2d", "array", "boost", "box", "c", "c++", "cartesian", "chart", "complex", "container", "curve",
+		"debug", "debugging", "deque", "geographic", "geometry", "gis", "graphical", "linestring", "list",
+		"plot", "point", "polygon", "ring", "segment", "spherical", "std", "stl", "tuple", "vector",
 		"visualization"
 	],
 	"icon": "resources/icon.png",
