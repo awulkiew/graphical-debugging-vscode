@@ -21,7 +21,7 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 
 * Containers of values, points and other geometries
   * C-style array
-  * STL: `array`, `deque`, `list`, `vector`
+  * STL: `array`, `deque`, `list`, `span`, `vector`
   * Boost.Array: `array`
   * Boost.Container: `static_vector`, `vector`
   * Boost.Geometry: `varray`

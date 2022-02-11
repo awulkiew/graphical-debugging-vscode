@@ -54,6 +54,15 @@
             "_comment": "msvc"
         },
         {
+            "type": "std::span<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this._Mydata",
+                "size": "$this._Mysize"
+            },
+            "_comment": "msvc"
+        },
+        {
             "type": "std::vector<.+>",
             "kind": "container",
             "darray": {
@@ -91,6 +100,24 @@
             "_comment": "gcc/libstdc++"
         },
         {
+            "type": "std::span<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this._M_ptr",
+                "size": "$this._M_extent._M_extent_value"
+            },
+            "_comment": "gcc/libstdc++"
+        },
+        {
+            "type": "std::span<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this._M_ptr",
+                "size": "$T1"
+            },
+            "_comment": "gcc/libstdc++"
+        },
+        {
             "type": "std::vector<.+>",
             "kind": "container",
             "darray": {
@@ -116,6 +143,24 @@
             "kind": "container",
             "array": {
                 "start": "$this.__elems_",
+                "size": "$T1"
+            },
+            "_comment": "llvm/libc++"
+        },
+        {
+            "type": "std::span<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this.__data",
+                "size": "$this.__size"
+            },
+            "_comment": "llvm/libc++"
+        },
+        {
+            "type": "std::span<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this.__data",
                 "size": "$T1"
             },
             "_comment": "llvm/libc++"
