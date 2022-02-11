@@ -8,21 +8,19 @@ import * as util from './util'
 import * as vscode from 'vscode';
 
 
-async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<draw.PlotlyData> {
-	gwVariable.type = 'not available';
+async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<[string, draw.PlotlyData]> {
 	const type = await dbg.getType(gwVariable.name);
-	if (type) {
-		gwVariable.type = type;
+	if (type !== undefined) {
 		const variable: load.Variable = new load.Variable(gwVariable.name, type);
 		const loader = await load.getLoader(dbg, variable);
 		if (loader instanceof load.Loader) {
 			const drawable = await loader.load(dbg, variable);
-			if (drawable) {
-				return drawable.toPlotly(gwVariable.color);
-			}
+			if (drawable !== undefined)
+				return [type, drawable.toPlotly(gwVariable.color)];
 		}
+		return ['unknown (' + type + ')', draw.PlotlyData.empty(gwVariable.color)];
 	}
-	return draw.PlotlyData.empty(gwVariable.color);
+	return ['not available', draw.PlotlyData.empty(gwVariable.color)];
 }
 
 function systemName(system: draw.System): string {
@@ -122,12 +120,18 @@ export function activate(context: vscode.ExtensionContext) {
 		if (graphicalWatch.variables.length > 0)
 			load.types.update(debugHelper);
 
+		for (let variable of graphicalWatch.variables)
+			variable.type = 'loading...';
+		graphicalWatch.refreshAll();
+
 		drawableData = [];
 		for (let variable of graphicalWatch.variables) {
-			const d = await handleVariable(debugHelper, variable);
+			const [t, d] = await handleVariable(debugHelper, variable);
 			drawableData.push(d);
+			variable.type = t;
+			graphicalWatch.refresh(variable);
 		}
-		graphicalWatch.refreshAll();
+		//graphicalWatch.refreshAll();
 
 		const message = prepareMessage(drawableData, vscode.window.activeColorTheme);
 		if (message.plots.length > 0) {
@@ -158,10 +162,12 @@ export function activate(context: vscode.ExtensionContext) {
 	graphicalWatch.onChange(async (e: GraphicalWatchEventData) => {
 		if (e.eventType === GraphicalWatchEventType.Add
 			|| e.eventType === GraphicalWatchEventType.Edit) {
-			if (e.variable) {
+			if (e.variable !== undefined) {
 				if (debugHelper.isStopped()) {
 					load.types.update(debugHelper);
-					const d = await handleVariable(debugHelper, e.variable);
+					e.variable.type = 'loading...';
+					graphicalWatch.refresh(e.variable);
+					const [t, d] = await handleVariable(debugHelper, e.variable);
 					if (e.eventType === GraphicalWatchEventType.Add) {
 						drawableData.push(d);
 					} else {
@@ -170,12 +176,14 @@ export function activate(context: vscode.ExtensionContext) {
 							drawableData[i] = d;
 						}
 					}
+					e.variable.type = t;
+					graphicalWatch.refresh(e.variable);
 					const message = prepareMessage(drawableData, vscode.window.activeColorTheme);
 					webview.showAndPostMessage(message);
 				} else {
 					e.variable.type = 'not available';
+					graphicalWatch.refresh(e.variable);
 				}
-				graphicalWatch.refresh(e.variable);
 			}
 		} else if (e.eventType === GraphicalWatchEventType.Remove) {
 			if (e.variable) {

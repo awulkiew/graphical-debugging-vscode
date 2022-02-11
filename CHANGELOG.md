@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Visualization of C++ STL `span`
 - Support for user-defined type aliases
+- Better loading states
 ### Fixed
 - Visualization of Boost.Geometry `polygon` with GDB
 
