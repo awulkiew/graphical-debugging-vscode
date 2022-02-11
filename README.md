@@ -51,10 +51,56 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 
 ##### User-defined types
 
-* see `*.json` files in `resources` directory
-* the directory containing user files can be defined in settings, by default it is the workspace directory of currently debugged program
+Users can define their types in `*.json` files which can be placed e.g. in the workspace. The following file defines `Point` C++ type containing `x` and `y` members.
+```
+{
+    "name": "graphicaldebugging",
+    "language": "cpp",
+    "types": [
+        {
+            "type": "Point",
+            "kind": "point",
+            "coordinates": {
+                "x": "$this.x",
+                "y": "$this.y"
+            }
+        }
+    ]
+}
+```
+
+For more examples see `*.json` files [here](https://github.com/awulkiew/graphical-debugging-vscode/tree/master/resources).
+
+The directory containing user files can be defined in settings, by default it is the workspace directory of currently debugged program.
+
+##### Type aliases
+
+By default the extension doesn't work for C++ `typedef`s with GDB and LLDB. It's because these debuggers doesn't return the original types which is how types are defined in this extension. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use of natvis files. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue automatically. For now there is only manual workaround.
+
+Users of these debuggers can define type aliases for `typedef`s used in their code. It can be done in the same `*.json` files as described above. For example the following aliases:
+```
+namespace bg = boost::geometry;
+using point_t = bg::model::point<double, 2, bg::cs::cartesian>;
+using polygon_t = bg::model::polygon<point_t>;
+```
+could be defined as follows:
+```
+{
+    "name": "graphicaldebugging",
+    "language": "cpp",
+    "aliases": [
+        {
+            "name": "point_t",
+            "type": "boost::geometry::model::point<double,2,boost::geometry::cs::cartesian>"
+        },
+        {
+            "name": "polygon_t",
+            "type": "boost::geometry::model::polygon<boost::geometry::model::point<double,2,boost::geometry::cs::cartesian>,true,true,std::vector,std::vector,std::allocator,std::allocator>"
+        }
+    ]
+}
+```
 
 #### Known issues
 
-* The extension doesn't work for C++ variables defined with `typedef` with GDB, including classes defining member types, e.g. Boost.Geometry `polygon`. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use of natvis files. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue.
 * Holes of geographic polygons may be visualized incorrectly. This is a side effect of a workaround for an [issue in Plotly](https://github.com/plotly/plotly.js/issues/6044) which doesn't support geographic polygons with holes.
