@@ -105,4 +105,5 @@ could be defined as follows:
 
 #### Known issues
 
+* You may experience problems with CodeLLDB because [simple expressions](https://github.com/vadimcn/vscode-lldb/blob/master/MANUAL.md#expressions) are enabled by default. If some of the variables are not visualized you could try enabling [native expressions](https://github.com/vadimcn/vscode-lldb/blob/master/MANUAL.md#launching-a-new-process) in the launch.json.
 * Holes of geographic polygons may be visualized incorrectly. This is a side effect of a workaround for an [issue in Plotly](https://github.com/plotly/plotly.js/issues/6044) which doesn't support geographic polygons with holes.
