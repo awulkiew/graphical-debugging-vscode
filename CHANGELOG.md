@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Known issues
 - The visualization is not shown after hiding the webview with another window and showing it again
 
+## [0.5.1]
+### Added
+- Information about LLDB
+
 ## [0.5.0]
 ### Added
 - Visualization of C++ STL `span`
