@@ -1,5 +1,11 @@
 # Graphical Debugging
-## extension for Visual Studio Code
+### Extension for Visual Studio Code
+
+[![VS Marketplace](https://vsmarketplacebadge.apphb.com/version-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
+[![Installs](https://vsmarketplacebadge.apphb.com/installs-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
+[![Rating](https://vsmarketplacebadge.apphb.com/rating-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
+![License](https://img.shields.io/github/license/awulkiew/graphical-debugging-vscode.svg)
+[![Donate](https://img.shields.io/badge/Donate-_-yellow.svg)](https://awulkiew.github.io/donate)
 
 This extension allows to display graphical representation of variables during debugging.
 
