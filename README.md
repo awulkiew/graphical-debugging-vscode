@@ -1,9 +1,9 @@
 # Graphical Debugging
 ### Extension for Visual Studio Code
 
-[![VS Marketplace](https://vsmarketplacebadge.apphb.com/version-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
-[![Installs](https://vsmarketplacebadge.apphb.com/installs-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
-[![Rating](https://vsmarketplacebadge.apphb.com/rating-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
+[![VS Marketplace](https://vsmarketplacebadges.dev/version-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
+[![Rating](https://vsmarketplacebadges.dev/rating-short/AdamWulkiewicz.graphicaldebugging-vscode.svg)](https://marketplace.visualstudio.com/items?itemName=AdamWulkiewicz.graphicaldebugging-vscode)
 ![License](https://img.shields.io/github/license/awulkiew/graphical-debugging-vscode.svg)
 [![Donate](https://img.shields.io/badge/Donate-_-yellow.svg)](https://awulkiew.github.io/donate)
 
