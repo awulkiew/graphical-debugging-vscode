@@ -84,12 +84,15 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 		message.plots[plotId].lonintervals.push(d.lonInterval);
 	}
 
+	const cartesianStr = systemName(draw.System.Cartesian);
+	const complexStr = systemName(draw.System.Complex);
 	const geographicStr = systemName(draw.System.Geographic);
 	for (let p of message.plots) {
 		if (p.system === geographicStr) {
 			const loninterval = util.LonInterval.fromIntervals(p.lonintervals);
 			p.lonmid = (loninterval.min + loninterval.max) / 2;
 		}
+		p.scaleanchor = p.system === cartesianStr || p.system === complexStr;
 	}
 
 	let projection = vscode.workspace.getConfiguration().get<string>('graphicalDebugging.geographicProjection');

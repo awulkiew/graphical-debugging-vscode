@@ -47,7 +47,7 @@ export class Webview {
 			);
 
 			const plotlyPath = vscode.Uri.file(
-				path.join(this._context.extensionPath, 'resources', 'plotly-2.6.3.min.js')
+				path.join(this._context.extensionPath, 'resources', 'plotly-2.18.1.min.js')
 			);
 			const plotlySrc = this._panel.webview.asWebviewUri(plotlyPath);
 			this._panel.webview.html = this.getWebviewContent(plotlySrc);
@@ -163,6 +163,9 @@ export class Webview {
 							let plots = setupPlotElements(event.data.plots.length);
 							for (let i = 0 ; i < event.data.plots.length ; ++i) {
 								layout.geo.projection.rotation.lon = event.data.plots[i].lonmid;
+								if (event.data.plots[i].scaleanchor) {
+									layout.yaxis.scaleanchor = 'x';
+								}
 								Plotly.newPlot(plots[i], event.data.plots[i].traces, layout, config);
 							}
 						});
