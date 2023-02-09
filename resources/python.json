@@ -41,6 +41,15 @@
             "_comment": "llist module"
         },
         {
+            "type": "ndarray",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.__len__()"
+            },
+            "_comment": "numpy module"
+        },
+        {
             "type": "Point2D",
             "kind": "point",
             "system": "cartesian",
