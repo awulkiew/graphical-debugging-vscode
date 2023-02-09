@@ -45,11 +45,12 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 * Containers of values, points and other geometries
   * `Array`
 
-##### Python (python)
+##### Python (python, Jupyter Notebook / Python Kernel Debug Adapter)
 
 * Containers of values, points and other geometries
   * `deque`, `list`
   * llist: `dllist`, `sllist`
+  * numpy: `array`
 * 2D geometries
   * `tuple`
   * Shapely: `GeometryCollection`, `LinearRing`, `LineString`, `MultiLineString`, `MultiPoint`, `MultiPolygon`, `Point`, `Polygon`
