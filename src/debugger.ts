@@ -16,7 +16,7 @@ export class SessionInfo {
             return undefined;
         if (['cppvsdbg', 'cppdbg', 'lldb'].includes(sessionType))
             return Language.Cpp;
-        else if (sessionType === 'python')
+        else if (['python', 'Python Kernel Debug Adapter'].includes(sessionType))
             return Language.Python;
         else if (['node', 'chrome', 'msedge', 'pwa-node', 'pwa-chrome', 'pwa-msedge'].includes(sessionType))
             return Language.JavaScript;
