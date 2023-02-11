@@ -384,7 +384,7 @@ export class Numbers extends ContainerLoader {
             const el = parseFloat(elVal);
             ys.push(el);
         }
-        return new draw.Plot(undefined, ys, draw.System.None);
+        return new draw.Plot(util.indexesArray(ys), ys, draw.System.None);
     }
 }
 
@@ -408,7 +408,7 @@ export class Values extends ContainerLoader {
                 return undefined
             ys.push(n);
         }
-        return new draw.Plot(undefined, ys, draw.System.None);
+        return new draw.Plot(util.indexesArray(ys), ys, draw.System.None);
     }
 }
 
@@ -618,7 +618,7 @@ export class Box2 extends Geometry {
 // TODO: This logic should rather be implemented in draw
 function loadBox(minx: number, miny: number, maxx: number, maxy: number, system: draw.System): draw.Ring {
     if (system !== draw.System.Geographic) {
-        return new draw.Ring([minx, minx, maxx, maxx], [miny, maxy, maxy, miny], system, true);
+        return new draw.Ring([minx, minx, maxx, maxx], [miny, maxy, maxy, miny], false, system, true);
     }
     else {
         miny = util.bounded(miny, -90, 90);
@@ -639,7 +639,7 @@ function loadBox(minx: number, miny: number, maxx: number, maxy: number, system:
             xs.push(x); ys.push(miny);
         }
         xs.push(minx); ys.push(miny);
-        return new draw.Ring(xs, ys, system, true);
+        return new draw.Ring(xs, ys, false, system, true);
     }
 }
 
@@ -658,16 +658,12 @@ export class Ring extends PointsRange {
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const plot = await super.load(dbg, variable);
         if (plot instanceof draw.Plot && plot.xs) {
-            const cw = await this._isCw(dbg, variable);
             // TODO: This doesn't work well with classes like Shapely Polygon
             //       where is_ccw member indicates the actual order of internal rings.
             //       Such rings should be reversed based on the exterior ring.
             //       Here rings are reversed locally.
-            if (! cw) {
-                plot.xs.reverse();
-                plot.ys.reverse();
-            }
-            return new draw.Ring(plot.xs, plot.ys, plot.system);
+            const isCw = await this._isCw(dbg, variable);
+            return new draw.Ring(plot.xs, plot.ys, !isCw, plot.system);
         }
         else
             return undefined;

@@ -1,11 +1,18 @@
+export const r2d = 180 / Math.PI;
+export const d2r = Math.PI / 180;
+
 export function bounded(v: number, min: number, max: number) {
     return Math.min(Math.max(v, min), max);
 }
 
-export function average(xs: number[] | undefined): number {
-    return xs && xs.length > 0
+export function average(xs: number[]): number {
+    return xs.length > 0
          ? xs.reduce((prev, curr) => prev + curr) / xs.length
          : 0;
+}
+
+export function indexesArray(ys: number[]): number[] {
+    return Array.from(Array(ys.length).keys());
 }
 
 // (-180, 180]
@@ -109,4 +116,46 @@ export class LonInterval {
             max += 360;
         return new LonInterval(min, max);
     }
+}
+
+export function firstSegment(xs: number[], ys: number[], isGeographic: boolean): any {
+    const n = Math.min(xs.length, ys.length);
+    for (let i = 0 ; i < n - 1 ; ++i) {
+        if (xs[i] !== xs[i + 1] || ys[i] !== ys[i + 1])
+            return {
+                xs: [xs[i], xs[i + 1]],
+                ys: [ys[i], ys[i + 1]]
+            };
+    }
+    return undefined;
+}
+
+export function rFirstSegment(xs: number[], ys: number[], isGeographic: boolean): any {
+    const n = Math.min(xs.length, ys.length);
+    for (let i = n - 1 ; i > 0 ; --i) {
+        if (xs[i] !== xs[i - 1] || ys[i] !== ys[i - 1])
+            return {
+                xs: [xs[i], xs[i - 1]],
+                ys: [ys[i], ys[i - 1]]
+            };
+    }
+    return undefined;
+}
+
+export function azimuth(x0: number, y0: number, x1: number, y1: number, isGeographic: boolean): number | undefined {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let num = 0;
+    let den = 0;
+    if (! isGeographic || dx * dx + dy * dy <= 1) {
+        num = dx;
+        den = dy;
+    }
+    else {
+        num = Math.sin(dx * d2r);
+        den = Math.tan(y1 * d2r) * Math.cos(y0 * d2r)
+            - Math.sin(y0 * d2r) * Math.cos(dx * d2r); 
+    }
+    const result = Math.atan2(num, den);
+    return isNaN(result) ? undefined : result * r2d;
 }

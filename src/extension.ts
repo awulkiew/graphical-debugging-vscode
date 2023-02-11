@@ -1,5 +1,5 @@
 import { GraphicalWatch, GraphicalWatchEventData, GraphicalWatchEventType, GraphicalWatchVariable } from './graphicalwatch';
-import { Debugger, Endianness } from './debugger';
+import { Debugger, Endianness, Language } from './debugger';
 import { Webview } from './webview';
 import * as colors from './colors.json'
 import * as draw from './drawable'
@@ -13,10 +13,11 @@ async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable)
 	if (type !== undefined) {
 		const variable: load.Variable = new load.Variable(gwVariable.name, type);
 		const loader = await load.getLoader(dbg, variable);
-		if (loader instanceof load.Loader) {
+		if (loader !== undefined) {
 			const drawable = await loader.load(dbg, variable);
-			if (drawable !== undefined)
+			if (drawable !== undefined) {
 				return [type, drawable.toPlotly(gwVariable.color)];
+			}
 		}
 		return ['unknown (' + type + ')', draw.PlotlyData.empty(gwVariable.color)];
 	}
@@ -80,6 +81,23 @@ function prepareMessage(potlyData: draw.PlotlyData[], colorTheme: vscode.ColorTh
 				trace.fillcolor = colorStr + '55';
 			trace.hoverinfo = d.system === draw.System.Geographic ? "lon+lat" : "x+y";
 			message.plots[plotId].traces.push(trace);
+
+			for (let dir of d.directions) {
+				let dirTrace : any = d.system === draw.System.Geographic ?
+					{ lon: [dir.x], lat: [dir.y] } :
+					{ x: [dir.x], y: [dir.y] };
+				dirTrace.type = trace.type;
+				dirTrace.mode = "markers";
+				dirTrace.hoverinfo = "skip";
+				dirTrace.marker = {
+					size: 10,
+					symbol: 'triangle-up',
+					angleref: 'up',
+					angle: dir.angle,
+					color: colorStr + 'CC'
+				};
+				message.plots[plotId].traces.push(dirTrace);
+			}
 		}
 		message.plots[plotId].lonintervals.push(d.lonInterval);
 	}

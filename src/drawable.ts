@@ -2,6 +2,14 @@ import * as util from './util'
 
 export enum System { None, Cartesian, Geographic, Complex };
 
+export class DirectionMarker {
+    constructor(
+        public x: number,
+        public y: number,
+        public angle: number)
+    {}
+}
+
 export class PlotlyData {
     constructor(
         public traces: any[],
@@ -10,12 +18,14 @@ export class PlotlyData {
         public colorId: number)
     {}
 
+    public directions: DirectionMarker[] = [];
+
     static empty(colorId: number) {
         return new PlotlyData([], System.None, new util.LonInterval(0, 0), colorId);
     }
 }
 
-function createTrace(xs: number[] | undefined, ys: number[], system: System): any {
+function createTrace(xs: number[], ys: number[], system: System): any {
     return system === System.Geographic
         ? {
             lon: xs === undefined ? Array.from(Array(ys.length).keys()) : xs,
@@ -24,6 +34,17 @@ function createTrace(xs: number[] | undefined, ys: number[], system: System): an
             x: xs === undefined ? Array.from(Array(ys.length).keys()) : xs,
             y: ys
         };
+}
+
+function direction(xs: number[], ys: number[], reversed: boolean, system: System) : DirectionMarker | undefined {
+    const isGeographic = system === System.Geographic;
+    const s = !reversed ? util.firstSegment(xs, ys, isGeographic) : util.rFirstSegment(xs, ys, isGeographic);
+    if (s === undefined)
+        return undefined;
+    const a = util.azimuth(s.xs[0], s.ys[0], s.xs[1], s.ys[1], isGeographic);
+    if (a === undefined)
+        return undefined;
+    return new DirectionMarker(s.xs[0], s.ys[0], a);
 }
 
 export class Drawable {
@@ -36,7 +57,7 @@ export enum PlotStyle { LinesAndMarkers, Lines, Markers, Bars };
 
 export class Plot extends Drawable {
     constructor(
-        public readonly xs: number[] | undefined,
+        public readonly xs: number[],
         public readonly ys: number[],
         public readonly system: System,
         public plotStyle: PlotStyle = PlotStyle.LinesAndMarkers) {
@@ -62,6 +83,12 @@ export class Plot extends Drawable {
                     trace.mode = "lines+markers";
             }
             result.traces = [trace];
+            if (this.plotStyle === PlotStyle.Lines || this.plotStyle === PlotStyle.LinesAndMarkers) {
+                const dir = direction(this.xs, this.ys, false, this.system);
+                if (dir !== undefined) {
+                    result.directions.push(dir);
+                }
+            }
         }
         if (this.system === System.Geographic)
             result.lonInterval = util.LonInterval.fromPoints(this.xs);
@@ -122,13 +149,21 @@ export class Ring extends Drawable {
     constructor(
         public readonly xs: number[],
         public readonly ys: number[],
+        public readonly reversed: boolean,
         public readonly system: System,
         private readonly _isBox: boolean = false) {
         super();
-        // naiively close the ring
-        if (xs.length > 0 && ys.length > 0) {
-            this.xs.push(xs[0]);
-            this.ys.push(ys[0]);
+        // close the ring
+        if (ys.length >= 2) {
+            // TODO: In geographic this may not detect the same points
+            if (xs[0] != xs[xs.length - 1] || ys[0] != ys[ys.length - 1]) {
+                this.xs.push(xs[0]);
+                this.ys.push(ys[0]);
+            }
+        }
+        if (reversed) {
+            this.xs.reverse();
+            this.ys.reverse();
         }
     }
     toPlotly(colorId: number): PlotlyData {
@@ -149,8 +184,15 @@ export class Ring extends Drawable {
                 mode: this._isBox ? "lines" : "lines+markers",
                 fill: 'toself'
             }];
-        if (this.system === System.Geographic)
+        if (this.system === System.Geographic) {
             result.lonInterval = util.LonInterval.fromPoints(this.xs);
+        }
+        if (this.ys.length > 0) {
+            const dir = direction(this.xs, this.ys, this.reversed, this.system);
+            if (dir !== undefined) {
+                result.directions.push(dir);
+            }
+        }
         return result;
     }
 };
@@ -171,6 +213,7 @@ export class Polygon extends Drawable {
                 result.traces[0].y.push(null);
                 result.traces[0].x = result.traces[0].x.concat(d.traces[0].x);
                 result.traces[0].y = result.traces[0].y.concat(d.traces[0].y);
+                result.directions = result.directions.concat(d.directions);
             }
         } else {
             // geographic has to be treated separately because typical way of dealing with holes does not work
@@ -193,6 +236,7 @@ export class Polygon extends Drawable {
                 result.traces[1].lon = result.traces[1].lon.concat(d.traces[0].lon);
                 result.traces[1].lat = result.traces[1].lat.concat(d.traces[0].lat);
                 closeHoles = true;
+                result.directions = result.directions.concat(d.directions);
             }
             if (closeHoles) {
                 result.traces[0].lon.push(result.traces[0].lon[0]);
