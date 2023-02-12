@@ -23,7 +23,7 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 
 #### Supported types
 
-##### C/C++ (cppdbg, cppvsdbg, lldb)
+##### C/C++ (cppdbg, cppvsdbg, lldb, cortex-debug)
 
 * Containers of values, points and other geometries
   * C-style array

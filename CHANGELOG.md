@@ -5,13 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Known issues
+- The visualization is not shown after hiding the webview with another window and showing it again
+
+## [0.6.0]
 ### Added
 - Visualization of python numpy.array
 - Support for Jupyter Notebook / Python Kernel Debug Adapter
+- Support for cortex-debug
+- Direction marker at first point/value
 ### Changed
 - Aspect ratio is kept for cartesian and complex variables
-### Known issues
-- The visualization is not shown after hiding the webview with another window and showing it again
 
 ## [0.5.1]
 ### Added
