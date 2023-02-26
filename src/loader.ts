@@ -243,6 +243,7 @@ export class RandomAccessContainer extends Container {}
 
 export class ContiguousContainer extends RandomAccessContainer {}
 
+// Static array
 export class Array extends ContiguousContainer
 {
     constructor(private _start: Expression, private _size: Expression) {
@@ -275,6 +276,7 @@ export class Array extends ContiguousContainer
     }
 }
 
+// Dynamic array
 export class DArray extends RandomAccessContainer {
     constructor(private _start: Expression, private _finish: Expression) {
         super();
@@ -500,21 +502,15 @@ export class Point extends Geometry {
 }
 
 export class PointsRange extends Geometry {
-    constructor(private _containerExpr: EvaluatedExpression) {
+    constructor(private _containerExpr: EvaluatedExpression,
+                private _pointsLoad: Points) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const contStr = this._containerExpr.expression.toString(variable);
         const contVar = new Variable(contStr, this._containerExpr.type);
-        if (this._pointsLoad === undefined) {
-            // TODO: only search for Container of Points 
-            const loader = await getLoader(dbg, contVar);
-            if (loader instanceof Points)
-                this._pointsLoad = loader as Points;
-        }
-        return this._pointsLoad?.load(dbg, contVar);
+        return this._pointsLoad.load(dbg, contVar);
     }
-    private _pointsLoad: Points | undefined = undefined;
 }
 
 export class Segment extends Geometry {
@@ -644,16 +640,18 @@ function loadBox(minx: number, miny: number, maxx: number, maxy: number, system:
 }
 
 export class Linestring extends PointsRange {
-    constructor(containerExpr: EvaluatedExpression) {
-        super(containerExpr);
+    constructor(containerExpr: EvaluatedExpression,
+                pointsLoad: Points) {
+        super(containerExpr, pointsLoad);
     }
 }
 
 export class Ring extends PointsRange {
     constructor(containerExpr: EvaluatedExpression,
+                pointsLoad: Points,
                 private _orientation: EvaluatedExpression | number | boolean | undefined = undefined,
                 private _cw: boolean = true) {
-        super(containerExpr);
+        super(containerExpr, pointsLoad);
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const plot = await super.load(dbg, variable);
@@ -692,8 +690,9 @@ export class Ring extends PointsRange {
 }
 
 export class MultiPoint extends PointsRange {
-    constructor(containerExpr: EvaluatedExpression) {
-        super(containerExpr);
+    constructor(containerExpr: EvaluatedExpression,
+                pointsLoad: Points) {
+        super(containerExpr, pointsLoad);
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         const plot = await super.load(dbg, variable);
@@ -985,6 +984,7 @@ export class Types {
             case 'java': return debug.Language.Java;
             case 'javascript': return debug.Language.JavaScript;
             case 'python': return debug.Language.Python;
+            case 'ruby': return debug.Language.Ruby;
             default: return undefined;
         }
     }
@@ -1000,8 +1000,19 @@ export let types: Types = new Types();
 // const nonContainers = ['value', 'point', 'linestring', 'ring', 'multipoint', 'polygon', 'multilinestring', 'multilipolygon'];
 // const geometries = ['point', 'linestring', 'ring', 'multipoint', 'polygon', 'multilinestring', 'multilipolygon'];
 
+type KindPredicate = (kind: string) => boolean;
+function allKinds(kind: string) { return true; }
+function nonContainers(kind: string) { return kind !== 'container'; }
+function onlyContainers(kind: string) { return kind === 'container'; }
+function onlyPoints(kind: string) { return kind === 'point'; }
+function onlyLinestrings(kind: string) { return kind === 'linestring'; }
+function onlyPolygons(kind: string) { return kind === 'polygon'; }
+
 // Return Container or Loader for Variable based on JSON definitions
-export async function getLoader(dbg: debug.Debugger, variable: Variable): Promise<Loader | undefined> {
+export async function getLoader(dbg: debug.Debugger,
+                                variable: Variable,
+                                kindPred: KindPredicate = allKinds,
+                                elemKindPred: KindPredicate = nonContainers): Promise<Loader | undefined> {
     const lang: debug.Language | undefined = dbg.language();
     if (lang === undefined)
         return undefined;
@@ -1009,28 +1020,16 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
     const variableType = variable.type;
 
     for (const [entry, type] of types.matchWithAliases(variableType, lang)) {
+        if (! kindPred(entry.kind)) {
+            continue;
+        }
         variable.type = type; // If alias is matched then the type has to be changed
         if (entry.kind === 'container') {
             const container: Container | undefined = await _getContainer(dbg, variable, entry);
-            if (container) {
-                const elemStr = container.element(variable);
-                if (elemStr) {
-                    const elemType = await dbg.getType(elemStr);
-                    if (elemType !== undefined) {
-                        const elemVar = new Variable(elemStr, elemType);
-                        // TODO: only search for non-containers to avoid recursion
-                        const elemLoad = await getLoader(dbg, elemVar);
-                        if (elemLoad instanceof Point)
-                            return new Points(container, elemLoad);
-                        else if (elemLoad instanceof Geometry)
-                            return new Geometries(container, elemLoad);
-                        const valLoad = await getValue(dbg, elemVar);
-                        if (valLoad instanceof Value)
-                            return new Values(container, valLoad);
-                        // Assume it's a container of numbers
-                        return new Numbers(container);
-                    }
-                }
+            if (container !== undefined) {
+                const elements = await getElements(dbg, variable, container, elemKindPred);
+                if (elements !== undefined)
+                    return elements;
             }
         }
         else if (entry.kind === 'point') {
@@ -1076,11 +1075,27 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             }
         }
         else if (entry.kind === 'linestring' || entry.kind === 'ring' || entry.kind === 'multipoint') {
-            if (entry.points?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.points.container.name, entry.points.container.type);
-                if (contExpr) {
+            if (entry.points?.container !== undefined) {
+                let contExpr: EvaluatedExpression | undefined = undefined;
+                let pointsLoad: Loader | undefined = undefined;
+                if (entry.points.container.name !== undefined) {
+                    contExpr = await evaluateExpression(dbg, variable, entry.points.container.name, entry.points.container.type);
+                    if (contExpr) {
+                        const contStr = contExpr.expression.toString(variable);
+                        const contVar = new Variable(contStr, contExpr.type);
+                        pointsLoad = await getLoader(dbg, contVar, onlyContainers, onlyPoints);
+                    }
+                }
+                else {
+                    contExpr = new EvaluatedExpression(new Expression('$this'), variable.name, variable.type);
+                    const contLoad: Container | undefined = await _getContainer(dbg, variable, entry.points.container);
+                    if (contLoad !== undefined) {
+                        pointsLoad = await getElements(dbg, variable, contLoad, onlyPoints);
+                    }
+                }
+                if (contExpr && pointsLoad instanceof Points) {
                     if (entry.kind === 'linestring')
-                        return new Linestring(contExpr);
+                        return new Linestring(contExpr, pointsLoad);
                     else if (entry.kind === 'ring') {
                         let orientation = undefined;
                         let cw = true;
@@ -1092,10 +1107,10 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
                             orientation = await getValueOrEvaluateExpression(dbg, variable, entry.ccw);
                             cw = false;
                         }
-                        return new Ring(contExpr, orientation, cw);
+                        return new Ring(contExpr, pointsLoad, orientation, cw);
                     }
                     else
-                        return new MultiPoint(contExpr);
+                        return new MultiPoint(contExpr, pointsLoad);
                 }
             }
         }
@@ -1112,32 +1127,51 @@ export async function getLoader(dbg: debug.Debugger, variable: Variable): Promis
             }
         }
         else if (entry.kind === 'multilinestring') {
-            if (entry.linestrings?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name, entry.linestrings.container.type);
-                if (contExpr) {
-                    const contVar = contExpr.variable;
-                    // TODO: only search for Container of Linestrings
-                    return await getLoader(dbg, contVar);
+            if (entry.linestrings?.container !== undefined) {
+                if (entry.linestrings.container.name != undefined) {
+                    const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name, entry.linestrings.container.type);
+                    if (contExpr) {
+                        const contVar = contExpr.variable;
+                        return await getLoader(dbg, contVar, onlyContainers, onlyLinestrings);
+                    }
+                }
+                else {
+                    const contLoad: Container | undefined = await _getContainer(dbg, variable, entry.linestrings.container);
+                    if (contLoad !== undefined)
+                        return await getElements(dbg, variable, contLoad, onlyLinestrings);
                 }
             }
         }
         else if (entry.kind === 'multipolygon') {
-            if (entry.polygons?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name, entry.polygons.container.type);
-                if (contExpr) {
-                    const contVar = contExpr.variable;
-                    // TODO: only search for Container of Polygons
-                    return await getLoader(dbg, contVar);
+            if (entry.polygons?.container !== undefined) {
+                if (entry.polygons.container.name !== undefined) {
+                    const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name, entry.polygons.container.type);
+                    if (contExpr) {
+                        const contVar = contExpr.variable;
+                        return await getLoader(dbg, contVar, onlyContainers, onlyPolygons);
+                    }
+                }
+                else {
+                    const contLoad: Container | undefined = await _getContainer(dbg, variable, entry.polygons.container);
+                    if (contLoad !== undefined)
+                        return await getElements(dbg, variable, contLoad, onlyPolygons);
                 }
             }
         }
         else if (entry.kind === 'geometrycollection') {
-            if (entry.geometries?.container?.name) {
-                const contExpr = await evaluateExpression(dbg, variable, entry.geometries.container.name, entry.geometries.container.type);
-                if (contExpr) {
-                    const contVar = contExpr.variable;
-                    const contLoad = await getContainer(dbg, contExpr.variable);
-                    if (contLoad)
+            if (entry.geometries?.container !== undefined) {
+                if (entry.geometries.container.name !== undefined) {
+                    const contExpr = await evaluateExpression(dbg, variable, entry.geometries.container.name, entry.geometries.container.type);
+                    if (contExpr) {
+                        const contVar = contExpr.variable;
+                        const contLoad = await getContainer(dbg, contExpr.variable);
+                        if (contLoad)
+                            return new GeometryCollection(contLoad);
+                    }
+                }
+                else {
+                    const contLoad: Container | undefined = await _getContainer(dbg, variable, entry.geometries.container);
+                    if (contLoad !== undefined)
                         return new GeometryCollection(contLoad);
                 }
             }
@@ -1179,6 +1213,32 @@ async function getValue(dbg: debug.Debugger, variable: Variable): Promise<Value 
             return value;
     }
 
+    return undefined;
+}
+
+async function getElements(dbg: debug.Debugger,
+                           variable: Variable,
+                           container: Container,
+                           elemKindPred: KindPredicate): Promise<Loader | undefined> {
+    const elemStr = container.element(variable);
+    if (elemStr !== undefined) {
+        const elemType = await dbg.getType(elemStr);
+        if (elemType !== undefined) {
+            const elemVar = new Variable(elemStr, elemType);
+            const elemLoad = await getLoader(dbg, elemVar, elemKindPred);
+            if (elemLoad instanceof Point)
+                return new Points(container, elemLoad);
+            else if (elemLoad instanceof Geometry)
+                return new Geometries(container, elemLoad);
+            if (elemKindPred('value')) {
+                const valLoad = await getValue(dbg, elemVar);
+                if (valLoad instanceof Value)
+                    return new Values(container, valLoad);
+                // Assume it's a container of numbers
+                return new Numbers(container);
+            }
+        }
+    }
     return undefined;
 }
 

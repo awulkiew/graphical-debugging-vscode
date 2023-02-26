@@ -1,0 +1,105 @@
+{
+    "name": "graphicaldebugging",
+    "language": "ruby",
+    "types": [
+        {
+            "type": "Array",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.length"
+            }
+        },
+        {
+            "type": "RGeo::Geos::CAPIPointImpl",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.x",
+                "y": "$this.y"
+            },
+            "_comment": "rgeo module"
+        },
+        {
+            "type": "RGeo::Geos::CAPILineImpl",
+            "kind": "segment",
+            "points": {
+                "p0": "$this.start_point",
+                "p1": "$this.end_point"
+            },
+            "_comment": "rgeo module"
+        },
+        {
+            "type": "RGeo::Geos::CAPILineStringImpl",
+            "kind": "linestring",
+            "points": {
+                "container": { "name": "$this.points" }
+            },
+            "_comment": "rgeo module"
+        },
+        {
+            "type": "RGeo::Cartesian::BoundingBox",
+            "kind": "box",
+            "points": {
+                "min": "$this.min_point",
+                "max": "$this.max_point"
+            }
+        },
+        {
+            "type": "RGeo::Geos::CAPILinearRingImpl",
+            "kind": "ring",
+            "points": {
+                "container": { "name": "$this.points" }
+            },
+            "_comment": "rgeo module"
+        },
+        {
+            "type": "RGeo::Geos::CAPIPolygonImpl",
+            "kind": "polygon",
+            "exteriorring": { "name": "$this.exterior_ring" },
+            "interiorrings": {
+                "container": { "name": "$this.interior_rings" }
+            },
+            "_comment": "rgeo module"
+        },
+        {
+            "type": "RGeo::Geos::CAPIMultiPointImpl",
+            "kind": "multipoint",
+            "points": {
+                "container": {
+                    "array": {
+                        "start": "$this",
+                        "size": "$this.num_geometries"
+                    }
+                }
+            },
+            "_comment": "rgeo module"
+        },
+        {
+            "type": "RGeo::Geos::CAPIMultiLineStringImpl",
+            "kind": "multilinestring",
+            "linestrings": {
+                "container": {
+                    "array": {
+                        "start": "$this",
+                        "size": "$this.num_geometries"
+                    }
+                }
+            },
+            "_comment": "rgeo module"
+        },
+        {
+            "type": "RGeo::Geos::CAPIMultiPolygonImpl",
+            "kind": "multipolygon",
+            "polygons": {
+                "container": {
+                    "array": {
+                        "start": "$this",
+                        "size": "$this.num_geometries"
+                    }
+                }
+            },
+            "_comment": "rgeo module"
+        }
+    ]
+}

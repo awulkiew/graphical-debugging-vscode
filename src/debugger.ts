@@ -8,6 +8,7 @@ export class SessionInfo {
         public frameId: number)
     {
         this.language = this._getLanguage();
+        this.context = this._getContext();
     }
 
     private _getLanguage(): Language | undefined {
@@ -22,11 +23,24 @@ export class SessionInfo {
             return Language.JavaScript;
         else if (sessionType === 'java')
             return Language.Java;
+        else if (sessionType === 'rdbg')
+            return Language.Ruby;
         else
             return undefined;
     }
 
+    private _getContext(): string | undefined {
+        const sessionType = this.session.type;
+        if (sessionType === undefined)
+            return undefined;
+        if (sessionType === 'rdbg')
+            return 'watch';
+        else
+            return undefined; 
+    }
+
     public language: Language | undefined;
+    public context: string | undefined;
 }
 
 export enum Endianness { Little, Big };
@@ -38,7 +52,7 @@ export class MachineInfo {
     {}
 }
 
-export enum Language { Cpp, Java, JavaScript, Python };
+export enum Language { Cpp, Java, JavaScript, Python, Ruby };
 
 export class Debugger {
     private _onStopped: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
@@ -110,8 +124,10 @@ export class Debugger {
         }
     }
 
-    private async _evaluate(session: vscode.DebugSession, expression:string, frameId: number) {
+    private async _evaluate(session: vscode.DebugSession, expression: string, frameId: number, context: string | undefined) {
         let exprArgs : DebugProtocol.EvaluateArguments = { expression: expression, frameId: frameId };
+        if (context !== undefined)
+            exprArgs.context = context;
         let expr = await session.customRequest('evaluate', exprArgs);
         return expr;
     }
@@ -141,11 +157,12 @@ export class Debugger {
     async machineInfo() {
         if (this.sessionInfo === undefined)
             return undefined;
-        const session = this.sessionInfo.session;
-        const frameId = this.sessionInfo.frameId;
         if (this.sessionInfo.language === Language.Cpp) {
-            //const expr1 = await this._evaluate(session, '(unsigned int)((unsigned char)-1)', frameId);
-            const expr2 = await this._evaluate(session, 'sizeof(void*)', frameId);
+            const session = this.sessionInfo.session;
+            const frameId = this.sessionInfo.frameId;
+            const context = this.sessionInfo.context;
+            //const expr1 = await this._evaluate(session, '(unsigned int)((unsigned char)-1)', frameId, context);
+            const expr2 = await this._evaluate(session, 'sizeof(void*)', frameId, context);
             if (expr2 === undefined || expr2.type === undefined)
                 return undefined;
             let pointerSize: number = 0;
@@ -155,7 +172,7 @@ export class Debugger {
                 pointerSize = 8;
             else
                 return undefined;
-            const expr3 = await this._evaluate(session, 'sizeof(unsigned long)', frameId);
+            const expr3 = await this._evaluate(session, 'sizeof(unsigned long)', frameId, context);
             if (expr3 === undefined || expr3.type === undefined)
                 return undefined;
             let endianness: Endianness | undefined = undefined;
@@ -172,7 +189,7 @@ export class Debugger {
                 expectedBig = '7017280452245743360';
             } else
                 return undefined;
-            const expr4 = await this._evaluate(session, expression, frameId);
+            const expr4 = await this._evaluate(session, expression, frameId, context);
             if (expr4 === undefined || expr4.type === undefined)
                 return undefined;
             if (expr4.result === expectedLittle)
@@ -190,6 +207,10 @@ export class Debugger {
         return (type === 'NameError' || type === 'AttributeError') && this.sessionInfo?.language === Language.Python;
     }
 
+    private _isRubyError(type: string): boolean {
+        return (type === 'NameError' || type === 'NoMethodError') && this.sessionInfo?.language === Language.Ruby;
+    }
+
     private _isJSObject(type: string): boolean {
         return type === 'object' && this.sessionInfo?.language === Language.JavaScript;
     }
@@ -197,6 +218,8 @@ export class Debugger {
     async getType(expression: string): Promise<string | undefined> {
         let type = (await this.evaluate(expression))?.type;
         if (this._isPythonError(type))
+            return undefined;
+        if (this._isRubyError(type))
             return undefined;
         if (this._isJSObject(type)) {
             const expr = await this.evaluate('(' + expression + ').constructor.name');
@@ -211,6 +234,8 @@ export class Debugger {
         const result = await this.evaluate(expression);
         if (this._isPythonError(result?.type))
             return undefined;
+        if (this._isRubyError(result?.type))
+            return undefined;
         return result?.type ? result.result : undefined;
     }
 
@@ -219,6 +244,8 @@ export class Debugger {
         const value = expr?.result;
         let type = expr?.type;
         if (this._isPythonError(type))
+            return undefined;
+        if (this._isRubyError(type))
             return undefined;
         if (this._isJSObject(type)) {
             const expr = await this.evaluate('(' + expression + ').constructor.name');
@@ -234,14 +261,14 @@ export class Debugger {
             return undefined;
         const session = this.sessionInfo.session;
         const frameId = this.sessionInfo.frameId;
-        return await this._evaluate(session, expression, frameId);
+        const context = this.sessionInfo.context;
+        return await this._evaluate(session, expression, frameId, context);
     }
 
     async variables(variablesReference:number, count: number | undefined = undefined) {
         if (this.sessionInfo === undefined)
             return undefined;
         const session = this.sessionInfo.session;
-        const frameId = this.sessionInfo.frameId;
         return await this._variables(session, variablesReference, count);
     }
 
