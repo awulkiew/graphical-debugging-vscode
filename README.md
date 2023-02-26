@@ -56,6 +56,13 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
   * Shapely: `GeometryCollection`, `LinearRing`, `LineString`, `MultiLineString`, `MultiPoint`, `MultiPolygon`, `Point`, `Polygon`
   * SymPy: `Point2D`, `Polygon`, `Segment2D`
 
+##### Ruby (rdbg)
+
+* Containers of values, points and other geometries
+  * `Array`
+* 2D geometries
+  * RGeo: `CAPIPointImpl`, `CAPILineImpl`, `CAPILineStringImpl`, `CAPILinearRingImpl`, `CAPIPolygonImpl`, `CAPIMultiPointImpl`, `CAPIMultiLineStringImpl`, `CAPIMultiPolygonImpl`, `BoundingBox`
+
 #### Advanced
 
 ##### User-defined types
