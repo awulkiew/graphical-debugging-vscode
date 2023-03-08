@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [0.7.0]
 ### Added
 - Support for Ruby
+- Visualization of Ruby Array
 - Visualization of Ruby RGeo cartesian geometries
 ### Changed
 - Webview can open in the last empty tab group
