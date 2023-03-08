@@ -18,9 +18,9 @@
 	],
 	"keywords": [
 		"2d", "array", "boost", "box", "c", "c++", "cartesian", "chart", "complex", "container", "curve",
-		"debug", "debugging", "deque", "geographic", "geometry", "gis", "graphical", "linestring", "list",
-		"plot", "point", "polygon", "ring", "segment", "spherical", "std", "stl", "tuple", "vector",
-		"visualization"
+		"debug", "debugging", "deque", "geographic", "geometry", "gis", "graphical", "javascript", "linestring", "list",
+		"plot", "point", "polygon", "python", "rgeo", "ring", "ruby", "segment", "shapely", "spherical", "std", "stl", "tuple", "vector",
+		"visualization", "visualize"
 	],
 	"icon": "resources/icon.png",
 	"repository": {

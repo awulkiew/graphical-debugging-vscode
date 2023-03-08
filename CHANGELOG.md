@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Known issues
 - The visualization is not shown after hiding the webview with another window and showing it again
 
+## [0.7.0]
+### Added
+- Support for Ruby
+- Visualization of Ruby RGeo cartesian geometries
+### Changed
+- Webview can open in the last empty tab group
+
 ## [0.6.0]
 ### Added
 - Visualization of python numpy.array
