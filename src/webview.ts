@@ -6,12 +6,18 @@ export class Webview {
 		private _context: vscode.ExtensionContext
 	) {}
 
-	showAndPostMessage(data: any, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Nine) {
+	showAndPostMessage(data: any) {
 		if (this._panel) {
 			if (! this._panel.visible)
-				this._panel.reveal(viewColumn);
+				this._panel.reveal();
 			this._panel.webview.postMessage(data);
 		} else {
+			let viewColumn: vscode.ViewColumn = vscode.ViewColumn.Nine;
+			for (const group of vscode.window.tabGroups.all) {
+				if (group.tabs.length === 0)
+					viewColumn = group.viewColumn;
+			}
+
 			this._panel = vscode.window.createWebviewPanel(
 				'graphicalWatchWebview',
 				'Graphical Watch', {
