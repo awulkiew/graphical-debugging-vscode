@@ -9,6 +9,7 @@ export class SessionInfo {
     {
         this.language = this._getLanguage();
         this.context = this._getContext();
+        this.debugger = this._getDebugger();
     }
 
     private _getLanguage(): Language | undefined {
@@ -31,16 +32,34 @@ export class SessionInfo {
 
     private _getContext(): string | undefined {
         const sessionType = this.session.type;
-        if (sessionType === undefined)
-            return undefined;
         if (sessionType === 'rdbg')
             return 'watch';
         else
             return undefined; 
     }
 
+    private _getDebugger(): string | undefined {
+        const sessionType = this.session.type;
+        if (sessionType !== undefined && this.language === Language.Cpp) {
+            if (sessionType === 'cppvsdbg')
+                return 'vsdbg';
+            else if (sessionType === 'cppdbg') {
+                if (this.session.configuration.MIMode === 'gdb')
+                    return 'gdb';
+                else if (this.session.configuration.MIMode === 'lldb')
+                    return 'lldb';
+            }
+            else if (sessionType === 'lldb')
+                return 'lldb';
+            else if (sessionType === 'cortex-debug')
+                return 'gdb';
+        }
+        return undefined;
+    }
+
     public language: Language | undefined;
-    public context: string | undefined;
+    public debugger: string | undefined;
+    public context: string | undefined;    
 }
 
 export enum Endianness { Little, Big };
@@ -215,6 +234,48 @@ export class Debugger {
         return type === 'object' && this.sessionInfo?.language === Language.JavaScript;
     }
 
+    async unrollTypeAlias(type: string): Promise<string>
+    {
+        const debuggerName = this.sessionInfo?.debugger;
+        if (debuggerName === 'gdb') {
+            let typeInfo = (await this.evaluate("-exec ptype /rmt " + type))?.result;
+            if (typeof typeInfo === 'string' && typeInfo.startsWith('type = ')) {
+                let start = 7;
+                if (typeInfo.startsWith('type = class ')) {
+                    start += 6;
+                }
+                else if (typeInfo.startsWith('type = struct ')) {
+                    start += 7;
+                }
+                else if (typeInfo.startsWith('type = union ')) {
+                    start += 6;
+                }
+                else if (typeInfo.startsWith('type = enum ')) {
+                    start += 5;
+                }
+                
+                let openedCount : number = 0;
+                for (let i = start; i < typeInfo.length ; ++i) {
+                    const ch = typeInfo.charAt(i);
+                    if (ch === '<') {
+                        ++openedCount;
+                    }
+                    else if (ch === '>') {
+                        --openedCount;
+                    }
+                    else if ((ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t') && openedCount === 0) {
+                        return typeInfo.substring(start, i);
+                    }
+                }
+                if (openedCount === 0) {
+                    return typeInfo.substring(start, typeInfo.length);
+                }
+            }
+        }
+
+        return type;
+    }
+
     async getType(expression: string): Promise<string | undefined> {
         let type = (await this.evaluate(expression))?.type;
         if (this._isPythonError(type))
@@ -255,7 +316,7 @@ export class Debugger {
         }
         return type !== undefined && value !== undefined ? [value, type] : undefined;
     }
-
+    
     async evaluate(expression: string) {
         if (this.sessionInfo === undefined)
             return undefined;
