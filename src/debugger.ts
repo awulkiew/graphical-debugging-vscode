@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as util from './util'
 import { DebugProtocol } from 'vscode-debugprotocol';
 
 export class SessionInfo {
@@ -234,42 +235,38 @@ export class Debugger {
         return type === 'object' && this.sessionInfo?.language === Language.JavaScript;
     }
 
-    async unrollTypeAlias(type: string): Promise<string>
-    {
+    rawType(type: string): string {
+        if (this.sessionInfo?.language === Language.Cpp) {
+            const [, result, ] = util.cppTypeModifiers(type);
+            return result;
+        }
+        return type;
+    }
+
+    async unrollTypeAlias(type: string): Promise<string> {
         const debuggerName = this.sessionInfo?.debugger;
         if (debuggerName === 'gdb') {
-            let typeInfo = (await this.evaluate("-exec ptype /rmt " + type))?.result;
-            if (typeof typeInfo === 'string' && typeInfo.startsWith('type = ')) {
-                let start = 7;
-                if (typeInfo.startsWith('type = class ')) {
-                    start += 6;
+            const evalResult = (await this.evaluate("-exec ptype /rmt " + type))?.result;
+            const typeInfo: string = typeof evalResult === 'string' ? evalResult.trim() : '';
+            if (typeInfo.startsWith('type = ')) {
+                // console.log(typeInfo);
+                let [prefix, typeStr, suffix] = util.cppTypeModifiers(typeInfo.substring(7));
+                if (typeStr.startsWith('class ')) {
+                    typeStr = typeStr.substring(6);
                 }
-                else if (typeInfo.startsWith('type = struct ')) {
-                    start += 7;
+                else if (typeStr.startsWith('struct ')) {
+                    typeStr = typeStr.substring(7);
                 }
-                else if (typeInfo.startsWith('type = union ')) {
-                    start += 6;
+                else if (typeStr.startsWith('union ')) {
+                    typeStr = typeStr.substring(6);
                 }
-                else if (typeInfo.startsWith('type = enum ')) {
-                    start += 5;
+                else if (typeStr.startsWith('enum class ')) {
+                    typeStr = typeStr.substring(11);
                 }
-                
-                let openedCount : number = 0;
-                for (let i = start; i < typeInfo.length ; ++i) {
-                    const ch = typeInfo.charAt(i);
-                    if (ch === '<') {
-                        ++openedCount;
-                    }
-                    else if (ch === '>') {
-                        --openedCount;
-                    }
-                    else if ((ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t') && openedCount === 0) {
-                        return typeInfo.substring(start, i);
-                    }
+                else if (typeStr.startsWith('enum ')) {
+                    typeStr = typeStr.substring(5);
                 }
-                if (openedCount === 0) {
-                    return typeInfo.substring(start, typeInfo.length);
-                }
+                return prefix + util.cppType(typeStr) + suffix;
             }
         }
 

@@ -159,3 +159,70 @@ export function azimuth(x0: number, y0: number, x1: number, y1: number, isGeogra
     const result = Math.atan2(num, den);
     return isNaN(result) ? undefined : result * r2d;
 }
+
+export function cppTypeModifiers(str: string): [string, string, string] {
+    str = str.trim();
+    let prefix = '';
+    let suffix = '';
+    if (str.startsWith('const ')) {
+        str = str.substring(6);
+        prefix = prefix + 'const ';
+    }
+    if (str.startsWith('volatile ')) {
+        str = str.substring(9);
+        prefix = prefix + 'volatile ';
+    }
+    if (str.endsWith(' volatile')) {
+        str = str.substring(0, str.length - 9);
+        suffix = ' volatile' + suffix;
+    }
+    if (str.endsWith(' const')) {
+        str = str.substring(0, str.length - 6);
+        suffix = ' const' + suffix;
+    }
+    if (str.endsWith(' &&')) {
+        str = str.substring(0, str.length - 3);
+        suffix = ' &&' + suffix;
+    }
+    else if (str.endsWith(' &')) {
+        str = str.substring(0, str.length - 2);
+        suffix = ' &' + suffix;
+    }
+    else if (str.endsWith(' *')) {
+        str = str.substring(0, str.length - 2);
+        suffix = ' *' + suffix;
+    }
+    else if (str.endsWith('&&')) {
+        str = str.substring(0, str.length - 2);
+        suffix = '&&' + suffix;
+    }
+    else if (str.endsWith('&')) {
+        str = str.substring(0, str.length - 1);
+        suffix = '&' + suffix;
+    }
+    else if (str.endsWith('*')) {
+        str = str.substring(0, str.length - 1);
+        suffix = '*' + suffix;
+    }
+    return [prefix, str, suffix];
+}
+
+export function cppType(str: string): string {
+    let openedCount : number = 0;
+    for (let i = 0; i < str.length ; ++i) {
+        const ch = str.charAt(i);
+        if (ch === '<') {
+            ++openedCount;
+        }
+        else if (ch === '>') {
+            --openedCount;
+        }
+        else if ((ch === ' ' || ch === '\n' || ch === '\r' || ch === '\t') && openedCount === 0) {
+            return str.substring(0, i);
+        }
+    }
+    if (openedCount === 0) {
+        return str.substring(0, str.length);
+    }
+    return str; // or '' or undefined
+}

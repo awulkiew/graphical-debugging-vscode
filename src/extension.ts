@@ -11,7 +11,8 @@ import * as vscode from 'vscode';
 async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable): Promise<[string, draw.PlotlyData]> {
 	const type = await dbg.getType(gwVariable.name);
 	if (type !== undefined) {
-		let variable: load.Variable = new load.Variable(gwVariable.name, type);
+		const rawType = dbg.rawType(type);
+		let variable: load.Variable = new load.Variable(gwVariable.name, rawType);
 		let loader = await load.getLoader(dbg, variable);
 		if (loader !== undefined) {
 			const drawable = await loader.load(dbg, variable);

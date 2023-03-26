@@ -1005,6 +1005,7 @@ async function *matchWithAliases(dbg: debug.Debugger, type: string, kinds: strin
         yield [entry, typ];
     }
     const unrolledType = await dbg.unrollTypeAlias(type)
+    // console.log(unrolledType);
     if (unrolledType !== type) {
         for (const entry of types.match(unrolledType, lang, kinds)) {
             yield [entry, unrolledType];
