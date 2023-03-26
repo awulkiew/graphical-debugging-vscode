@@ -997,6 +997,21 @@ export class Types {
 
 export let types: Types = new Types();
 
+async function *matchWithAliases(dbg: debug.Debugger, type: string, kinds: string[] | undefined = undefined) {
+    const lang: debug.Language | undefined = dbg.language();
+    if (lang === undefined)
+        return;
+    for (const [entry, typ] of types.matchWithAliases(type, lang, kinds)) {
+        yield [entry, typ];
+    }
+    const unrolledType = await dbg.unrollTypeAlias(type)
+    if (unrolledType !== type) {
+        for (const entry of types.match(unrolledType, lang, kinds)) {
+            yield [entry, unrolledType];
+        }
+    }
+}
+
 // const nonContainers = ['value', 'point', 'linestring', 'ring', 'multipoint', 'polygon', 'multilinestring', 'multilipolygon'];
 // const geometries = ['point', 'linestring', 'ring', 'multipoint', 'polygon', 'multilinestring', 'multilipolygon'];
 
@@ -1013,13 +1028,8 @@ export async function getLoader(dbg: debug.Debugger,
                                 variable: Variable,
                                 kindPred: KindPredicate = allKinds,
                                 elemKindPred: KindPredicate = nonContainers): Promise<Loader | undefined> {
-    const lang: debug.Language | undefined = dbg.language();
-    if (lang === undefined)
-        return undefined;
-
-    const variableType = variable.type;
-
-    for (const [entry, type] of types.matchWithAliases(variableType, lang)) {
+    
+    for await (const [entry, type] of matchWithAliases(dbg, variable.type)) {
         if (! kindPred(entry.kind)) {
             continue;
         }
@@ -1182,13 +1192,7 @@ export async function getLoader(dbg: debug.Debugger,
 
 // Return Container for Variable based on JSON definitions
 async function getContainer(dbg: debug.Debugger, variable: Variable): Promise<Container | undefined> {
-    const lang: debug.Language | undefined = dbg.language();
-    if (lang === undefined)
-        return undefined;
-
-    const variableType = variable.type;
-
-    for (const [entry, type] of types.matchWithAliases(variableType, lang, ['container'])) {
+    for await (const [entry, type] of matchWithAliases(dbg, variable.type, ['container'])) {
         variable.type = type;
         const container = await _getContainer(dbg, variable, entry);
         if (container)
@@ -1200,13 +1204,7 @@ async function getContainer(dbg: debug.Debugger, variable: Variable): Promise<Co
 
 // Return Value for Variable based on JSON definitions
 async function getValue(dbg: debug.Debugger, variable: Variable): Promise<Value | undefined> {
-    const lang: debug.Language | undefined = dbg.language();
-    if (lang === undefined)
-        return undefined;
-
-    const variableType = variable.type;
-
-    for (const [entry, type] of types.matchWithAliases(variableType, lang, ['value'])) {
+    for await(const [entry, type] of matchWithAliases(dbg, variable.type, ['value'])) {
         variable.type = type;
         const value = await _getValue(dbg, variable, entry);
         if (value)

@@ -13,30 +13,15 @@ async function handleVariable(dbg: Debugger, gwVariable: GraphicalWatchVariable)
 	if (type !== undefined) {
 		let variable: load.Variable = new load.Variable(gwVariable.name, type);
 		let loader = await load.getLoader(dbg, variable);
-		// If loader cannot be found try to unroll the type
-		let unrolledType : string | undefined = undefined;
-		if (loader === undefined) {
-			unrolledType = await dbg.unrollTypeAlias(type);
-			if (unrolledType !== type) {
-				variable = new load.Variable(gwVariable.name, unrolledType);
-				loader = await load.getLoader(dbg, variable);
-			}
-			else {
-				unrolledType = undefined;
-			}
-		}
 		if (loader !== undefined) {
 			const drawable = await loader.load(dbg, variable);
 			if (drawable !== undefined) {
-				return [unrolledType === undefined ? type : type + ' (' + unrolledType + ')',
-						drawable.toPlotly(gwVariable.color)];
+				return [type, drawable.toPlotly(gwVariable.color)];
 			}
 		}
-		return ['unknown (' + type + ')',
-				draw.PlotlyData.empty(gwVariable.color)];
+		return ['unknown (' + type + ')', draw.PlotlyData.empty(gwVariable.color)];
 	}
-	return ['not available',
-			draw.PlotlyData.empty(gwVariable.color)];
+	return ['not available', draw.PlotlyData.empty(gwVariable.color)];
 }
 
 function systemName(system: draw.System): string {
