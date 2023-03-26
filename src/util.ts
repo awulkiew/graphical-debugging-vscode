@@ -160,51 +160,30 @@ export function azimuth(x0: number, y0: number, x1: number, y1: number, isGeogra
     return isNaN(result) ? undefined : result * r2d;
 }
 
-export function cppTypeModifiers(str: string): [string, string, string] {
+export function cppRemoveTypeModifiers(str: string): string {
     str = str.trim();
-    let prefix = '';
-    let suffix = '';
     if (str.startsWith('const ')) {
         str = str.substring(6);
-        prefix = prefix + 'const ';
     }
     if (str.startsWith('volatile ')) {
         str = str.substring(9);
-        prefix = prefix + 'volatile ';
     }
     if (str.endsWith(' volatile')) {
         str = str.substring(0, str.length - 9);
-        suffix = ' volatile' + suffix;
     }
     if (str.endsWith(' const')) {
         str = str.substring(0, str.length - 6);
-        suffix = ' const' + suffix;
     }
-    if (str.endsWith(' &&')) {
-        str = str.substring(0, str.length - 3);
-        suffix = ' &&' + suffix;
-    }
-    else if (str.endsWith(' &')) {
+    if (str.endsWith('&&')) {
         str = str.substring(0, str.length - 2);
-        suffix = ' &' + suffix;
-    }
-    else if (str.endsWith(' *')) {
-        str = str.substring(0, str.length - 2);
-        suffix = ' *' + suffix;
-    }
-    else if (str.endsWith('&&')) {
-        str = str.substring(0, str.length - 2);
-        suffix = '&&' + suffix;
     }
     else if (str.endsWith('&')) {
         str = str.substring(0, str.length - 1);
-        suffix = '&' + suffix;
     }
     else if (str.endsWith('*')) {
         str = str.substring(0, str.length - 1);
-        suffix = '*' + suffix;
     }
-    return [prefix, str, suffix];
+    return str.trimEnd();
 }
 
 export function cppType(str: string): string {

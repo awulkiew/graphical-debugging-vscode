@@ -133,9 +133,17 @@ export class Debugger {
         }
     }
 
+    private async _customRequest(session: vscode.DebugSession, command: string, args: any) {
+        try {
+            return await session.customRequest(command, args);
+        } catch (error) {
+            return undefined;
+        }
+    }
+
     private async _frameId(session: vscode.DebugSession, threadId: number) {
         const stackArgs: DebugProtocol.StackTraceArguments = { threadId: threadId, startFrame: 0, levels: 1 };
-        const stackTrace = await session.customRequest('stackTrace', stackArgs);
+        const stackTrace = await this._customRequest(session, 'stackTrace', stackArgs);
         if (stackTrace && stackTrace.stackFrames && stackTrace.stackFrames.length > 0) {
             const frame = stackTrace.stackFrames[0] as DebugProtocol.StackFrame;
             return frame.id;
@@ -148,14 +156,12 @@ export class Debugger {
         let exprArgs : DebugProtocol.EvaluateArguments = { expression: expression, frameId: frameId };
         if (context !== undefined)
             exprArgs.context = context;
-        let expr = await session.customRequest('evaluate', exprArgs);
-        return expr;
+        return await this._customRequest(session, 'evaluate', exprArgs);
     }
 
     private async _variables(session: vscode.DebugSession, variablesReference:number, count: number | undefined) {
-        let exprArgs : DebugProtocol.VariablesArguments = { variablesReference: variablesReference, count: count };
-        let expr = await session.customRequest('variables', exprArgs);
-        return expr;
+        const exprArgs : DebugProtocol.VariablesArguments = { variablesReference: variablesReference, count: count };
+        return await this._customRequest(session, 'variables', exprArgs);
     }
 
     isStopped() : boolean {
@@ -237,36 +243,36 @@ export class Debugger {
 
     rawType(type: string): string {
         if (this.sessionInfo?.language === Language.Cpp) {
-            const [, result, ] = util.cppTypeModifiers(type);
-            return result;
+            return util.cppRemoveTypeModifiers(type);
         }
         return type;
     }
 
+    // type has to be raw type, without modifiers, refs and ptrs
     async unrollTypeAlias(type: string): Promise<string> {
         const debuggerName = this.sessionInfo?.debugger;
         if (debuggerName === 'gdb') {
             const evalResult = (await this.evaluate("-exec ptype /rmt " + type))?.result;
-            const typeInfo: string = typeof evalResult === 'string' ? evalResult.trim() : '';
+            let typeInfo: string = typeof evalResult === 'string' ? evalResult.trim() : '';
             if (typeInfo.startsWith('type = ')) {
                 // console.log(typeInfo);
-                let [prefix, typeStr, suffix] = util.cppTypeModifiers(typeInfo.substring(7));
-                if (typeStr.startsWith('class ')) {
-                    typeStr = typeStr.substring(6);
+                typeInfo = typeInfo.substring(7);
+                if (typeInfo.startsWith('class ')) {
+                    typeInfo = typeInfo.substring(6);
                 }
-                else if (typeStr.startsWith('struct ')) {
-                    typeStr = typeStr.substring(7);
+                else if (typeInfo.startsWith('struct ')) {
+                    typeInfo = typeInfo.substring(7);
                 }
-                else if (typeStr.startsWith('union ')) {
-                    typeStr = typeStr.substring(6);
+                else if (typeInfo.startsWith('union ')) {
+                    typeInfo = typeInfo.substring(6);
                 }
-                else if (typeStr.startsWith('enum class ')) {
-                    typeStr = typeStr.substring(11);
+                else if (typeInfo.startsWith('enum class ')) {
+                    typeInfo = typeInfo.substring(11);
                 }
-                else if (typeStr.startsWith('enum ')) {
-                    typeStr = typeStr.substring(5);
+                else if (typeInfo.startsWith('enum ')) {
+                    typeInfo = typeInfo.substring(5);
                 }
-                return prefix + util.cppType(typeStr) + suffix;
+                return util.cppType(typeInfo);
             }
         }
 
@@ -314,12 +320,13 @@ export class Debugger {
         return type !== undefined && value !== undefined ? [value, type] : undefined;
     }
     
-    async evaluate(expression: string) {
+    async evaluate(expression: string, context: string | undefined = undefined) {
         if (this.sessionInfo === undefined)
             return undefined;
         const session = this.sessionInfo.session;
         const frameId = this.sessionInfo.frameId;
-        const context = this.sessionInfo.context;
+        if (context === undefined)
+            context = this.sessionInfo.context;
         return await this._evaluate(session, expression, frameId, context);
     }
 
@@ -335,7 +342,7 @@ export class Debugger {
             return undefined;
         const session = this.sessionInfo.session;
         let readMemoryArgs : DebugProtocol.ReadMemoryArguments = { memoryReference: memoryReference, offset: offset, count: count };
-        return await session.customRequest('readMemory', readMemoryArgs);
+        return await this._customRequest(session, 'readMemory', readMemoryArgs);
     }
 
     async readMemoryBuffer(memoryReference: string, offset: number, count: number) {
