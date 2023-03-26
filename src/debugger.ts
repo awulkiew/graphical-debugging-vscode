@@ -252,7 +252,7 @@ export class Debugger {
     async unrollTypeAlias(type: string): Promise<string> {
         const debuggerName = this.sessionInfo?.debugger;
         if (debuggerName === 'gdb') {
-            const evalResult = (await this.evaluate("-exec ptype /rmt " + type))?.result;
+            const evalResult = (await this.evaluate('-exec ptype /rmt ' + type))?.result;
             let typeInfo: string = typeof evalResult === 'string' ? evalResult.trim() : '';
             if (typeInfo.startsWith('type = ')) {
                 // console.log(typeInfo);
@@ -273,6 +273,18 @@ export class Debugger {
                     typeInfo = typeInfo.substring(5);
                 }
                 return util.cppType(typeInfo);
+            }
+        }
+        else if (debuggerName === 'lldb') {
+            const typeInfo = (await this.evaluate('image lookup --type "' + type + '"', '_command'))?.result;
+            if (typeof typeInfo === 'string') {
+                const begin = typeInfo.indexOf('qualified = "');
+                if (begin >= 0) {
+                    const end = typeInfo.indexOf('"', begin + 13);
+                    if (end >= 0) {
+                        return typeInfo.substring(begin + 13, end);
+                    }
+                }
             }
         }
 
