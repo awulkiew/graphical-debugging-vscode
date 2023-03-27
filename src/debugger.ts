@@ -306,6 +306,13 @@ export class Debugger {
         return type;
     }
 
+    // NOTE: In LLDB members of cv types are also cv while in GDB they are not
+    //   This function can be used to consistently get types without modifiers
+    async getRawType(expression: string): Promise<string | undefined> {
+        const type = await this.getType(expression);
+        return type !== undefined ? this.rawType(type) : undefined;
+    }
+
     async getValue(expression: string): Promise<string | undefined> {
         const result = await this.evaluate(expression);
         if (this._isPythonError(result?.type))
@@ -330,6 +337,16 @@ export class Debugger {
             }
         }
         return type !== undefined && value !== undefined ? [value, type] : undefined;
+    }
+
+    // NOTE: In LLDB members of cv types are also cv while in GDB they are not
+    //   This function can be used to consistently get types without modifiers
+    async getValueAndRawType(expression: string): Promise<[string, string] | undefined> {
+        const result = await this.getValueAndType(expression);
+        if (result !== undefined) {
+            result[1] = this.rawType(result[1]);
+        }
+        return result;
     }
     
     async evaluate(expression: string, context: string | undefined = undefined) {

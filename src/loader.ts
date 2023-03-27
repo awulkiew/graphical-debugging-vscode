@@ -185,7 +185,7 @@ async function evaluateExpression(dbg: debug.Debugger, variable: Variable, expre
     // Technically if expressionType is passed we don't have to evaluate the expression because
     // the type is known. But right now this function is used to check if a type contains members
     // defined in json file. So get the value anyway and after that alter the type.
-    let vt = await dbg.getValueAndType(str);
+    let vt = await dbg.getValueAndRawType(str);
     if (vt === undefined)
         return undefined;
     if (expressionType !== undefined) {
@@ -223,7 +223,7 @@ async function getValueOrEvaluateExpression(dbg: debug.Debugger, variable: Varia
     const val = getValueFromExpressionStr(dbg, str);
     if (val !== undefined)
         return val;
-	const vt = await dbg.getValueAndType(str);
+	const vt = await dbg.getValueAndRawType(str);
     return vt !== undefined ? new EvaluatedExpression(expr, str, vt[1]) : undefined;
 }
 
@@ -398,7 +398,7 @@ export class Values extends ContainerLoader {
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
-        const elType = await dbg.getType(elStr);
+        const elType = await dbg.getRawType(elStr);
         if (elType === undefined)
             return undefined;
         let ys: number[] = [];
@@ -422,7 +422,7 @@ export class Points extends ContainerLoader {
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
-        const elType = await dbg.getType(elStr);
+        const elType = await dbg.getRawType(elStr);
         if (elType === undefined)
             return undefined;
         let xs: number[] = [];
@@ -451,7 +451,7 @@ export class Geometries extends ContainerLoader {
         const elStr = this._container.element(variable);
         if (elStr === undefined)
             return undefined;
-        const elType = await dbg.getType(elStr);
+        const elType = await dbg.getRawType(elStr);
         if (elType === undefined)
             return undefined;
         let drawables: draw.Drawable[] = [];
@@ -769,7 +769,7 @@ export class GeometryCollection extends ContainerLoader {
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         let drawables: draw.Drawable[] = [];        
         for await (let elStr of this._container.elements(dbg, variable)) {
-            const elType = await dbg.getType(elStr);
+            const elType = await dbg.getRawType(elStr);
             if (elType === undefined)
                 return undefined;
             const v = new Variable(elStr, elType);
@@ -1221,7 +1221,7 @@ async function getElements(dbg: debug.Debugger,
                            elemKindPred: KindPredicate): Promise<Loader | undefined> {
     const elemStr = container.element(variable);
     if (elemStr !== undefined) {
-        const elemType = await dbg.getType(elemStr);
+        const elemType = await dbg.getRawType(elemStr);
         if (elemType !== undefined) {
             const elemVar = new Variable(elemStr, elemType);
             const elemLoad = await getLoader(dbg, elemVar, elemKindPred);

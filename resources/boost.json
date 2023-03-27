@@ -190,7 +190,10 @@
             "type": "boost::geometry::model::linestring<.+>",
             "kind": "linestring",
             "points": {
-                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+                "container": {
+                    "name": "$this",
+                    "type": "$T1<$T0,$T2<$T0>>"
+                }
             }
         },
         {
@@ -206,7 +209,10 @@
             "kind": "ring",
             "cw": "$T1",
             "points": {
-                "container": { "name": "*($T3<$T0,$T4<$T0>>*)(&$this)" }
+                "container": {
+                    "name": "$this",
+                    "type": "$T3<$T0,$T4<$T0>>"
+                }
             }
         },
         {
@@ -227,21 +233,30 @@
             "type": "boost::geometry::model::multi_point<.+>",
             "kind": "multipoint",
             "points": {
-                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+                "container": {
+                    "name": "$this",
+                    "type": "$T1<$T0,$T2<$T0>>"
+                }
             }
         },
         {
             "type": "boost::geometry::model::multi_linestring<.+>",
             "kind": "multilinestring",
             "linestrings": {
-                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+                "container": {
+                    "name": "$this",
+                    "type": "$T1<$T0,$T2<$T0>>"
+                }
             }
         },
         {
             "type": "boost::geometry::model::multi_polygon<.+>",
             "kind": "multipolygon",
             "polygons": {
-                "container": { "name": "*($T1<$T0,$T2<$T0>>*)(&$this)" }
+                "container": {
+                    "name": "$this",
+                    "type": "$T1<$T0,$T2<$T0>>"
+                }
             }
         },
         {
