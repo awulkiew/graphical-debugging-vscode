@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Known issues
 - The visualization is not shown after hiding the webview with another window and showing it again
 
+## [0.8.0]
+### Added
+- Automatic C++ type alias unrolling in GDB and LLDB
+### Fixed
+- Handling of C++ const, volatile and reference types
+- Support for CodeLLDB
+
 ## [0.7.0]
 ### Added
 - Support for Ruby

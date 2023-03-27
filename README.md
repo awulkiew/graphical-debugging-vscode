@@ -91,9 +91,9 @@ The directory containing user files can be defined in settings, by default it is
 
 ##### Type aliases
 
-By default the extension doesn't work for C++ `typedef`s with GDB and LLDB. It's because these debuggers don't return the original types which is how types are defined in this extension. This issue [is known](https://github.com/microsoft/vscode-cpptools/issues/3038) and also affects the use of natvis files in VSCode. If [this proposal](https://github.com/microsoft/MIEngine/issues/1236) was implemented it could potentially allow to work around this issue automatically. For now there is only manual workaround.
+GDB and LLDB debuggers [don't report](https://github.com/microsoft/vscode-cpptools/issues/3038) original C++ types for variables created from type alias/typedef but original types are needed for this extension to work correctly. Fortunately the implementation of [this proposal](https://github.com/microsoft/MIEngine/issues/1236) allows to unroll the types automatically.
 
-If you use GDB or LLDB you can define type aliases used in your code. It can be done in the same `*.json` files as described above. For example the following aliases:
+If you choose to define aliases manually, e.g. automatic unrolling doesn't work for you, you can do it in the same `*.json` files as described above. For example the following aliases:
 ```c++
 namespace bg = boost::geometry;
 using point_t = bg::model::point<double, 2, bg::cs::cartesian>;
@@ -119,5 +119,5 @@ could be defined as follows:
 
 #### Known issues
 
-* You may experience problems with CodeLLDB because [simple expressions](https://github.com/vadimcn/vscode-lldb/blob/master/MANUAL.md#expressions) are enabled by default. If some of the variables are not visualized you could try enabling [native expressions](https://github.com/vadimcn/vscode-lldb/blob/master/MANUAL.md#launching-a-new-process) in the launch.json.
+* You may experience problems with CodeLLDB because [simple expressions](https://github.com/vadimcn/vscode-lldb/blob/master/MANUAL.md#expressions) are enabled by default. If some of the variables are not visualized you could try enabling [native expressions](https://github.com/vadimcn/codelldb/blob/master/MANUAL.md#starting-a-new-debug-session) in the launch.json.
 * Holes of geographic polygons may be visualized incorrectly. This is a side effect of a workaround for an [issue in Plotly](https://github.com/plotly/plotly.js/issues/6044) which doesn't support geographic polygons with holes.
