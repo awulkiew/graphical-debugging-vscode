@@ -374,7 +374,7 @@ export class Loader {
 export class ContainerLoader extends Loader {}
 
 export class Numbers extends ContainerLoader {
-    constructor(private _container: Container) {
+    constructor(private _container: Container, private _numberType: string) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
@@ -391,20 +391,13 @@ export class Numbers extends ContainerLoader {
 }
 
 export class Values extends ContainerLoader {
-    constructor(private _container: Container, private _value: Value) {
+    constructor(private _container: Container, private _value: Value, private _valueType: string) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        const elStr = this._container.element(variable);
-        if (elStr === undefined)
-            return undefined;
-        const elType = await dbg.getRawType(elStr);
-        if (elType === undefined)
-            return undefined;
         let ys: number[] = [];
-        let v = new Variable(elStr, elType);
         for await (let elStr of this._container.elements(dbg, variable)) {
-            v.name = elStr;
+            const v = new Variable(elStr, this._valueType);
             const n = await this._value.load(dbg, v);
             if (n === undefined)
                 return undefined
@@ -415,22 +408,15 @@ export class Values extends ContainerLoader {
 }
 
 export class Points extends ContainerLoader {
-    constructor(private _container: Container, private _point: Point) {
+    constructor(private _container: Container, private _point: Point, private _pointType: string) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        const elStr = this._container.element(variable);
-        if (elStr === undefined)
-            return undefined;
-        const elType = await dbg.getRawType(elStr);
-        if (elType === undefined)
-            return undefined;
         let xs: number[] = [];
         let ys: number[] = [];
-        let v = new Variable(elStr, elType);
         let system = draw.System.None;
         for await (let elStr of this._container.elements(dbg, variable)) {
-            v.name = elStr;
+            let v = new Variable(elStr, this._pointType);
             const point = await this._point.load(dbg, v);
             if (point === undefined)
                 return undefined;
@@ -444,20 +430,13 @@ export class Points extends ContainerLoader {
 }
 
 export class Geometries extends ContainerLoader {
-    constructor(private _container: Container, private _geometry: Geometry) {
+    constructor(private _container: Container, private _geometry: Geometry, private _geometryType: string) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        const elStr = this._container.element(variable);
-        if (elStr === undefined)
-            return undefined;
-        const elType = await dbg.getRawType(elStr);
-        if (elType === undefined)
-            return undefined;
         let drawables: draw.Drawable[] = [];
-        let v = new Variable(elStr, elType);
         for await (let elStr of this._container.elements(dbg, variable)) {
-            v.name = elStr;
+            const v = new Variable(elStr, this._geometryType);
             const d = await this._geometry.load(dbg, v);
             if (d === undefined)
                 return undefined;
@@ -1226,15 +1205,15 @@ async function getElements(dbg: debug.Debugger,
             const elemVar = new Variable(elemStr, elemType);
             const elemLoad = await getLoader(dbg, elemVar, elemKindPred);
             if (elemLoad instanceof Point)
-                return new Points(container, elemLoad);
+                return new Points(container, elemLoad, elemType);
             else if (elemLoad instanceof Geometry)
-                return new Geometries(container, elemLoad);
+                return new Geometries(container, elemLoad, elemType);
             if (elemKindPred('value')) {
                 const valLoad = await getValue(dbg, elemVar);
                 if (valLoad instanceof Value)
-                    return new Values(container, valLoad);
+                    return new Values(container, valLoad, elemType);
                 // Assume it's a container of numbers
-                return new Numbers(container);
+                return new Numbers(container, elemType);
             }
         }
     }
