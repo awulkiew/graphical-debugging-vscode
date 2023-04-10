@@ -127,6 +127,7 @@ export class Debugger {
     }
 
     private _setUnavailable() {
+        this._machineInfo = undefined;
         if (this.sessionInfo) {
             this.sessionInfo = undefined;
             this._onUnavailable.fire();
@@ -164,23 +165,7 @@ export class Debugger {
         return await this._customRequest(session, 'variables', exprArgs);
     }
 
-    isStopped() : boolean {
-        return this.sessionInfo !== undefined;
-    }
-
-    language(): Language | undefined {
-        if (this.sessionInfo === undefined)
-            return undefined;
-        return this.sessionInfo.language;
-    }
-
-    workspaceFolder(): string | undefined {
-        if (this.sessionInfo === undefined)
-            return undefined;
-        return this.sessionInfo.session.workspaceFolder?.uri.fsPath;
-    }
-
-    async machineInfo() {
+    private async _getMachineInfo(): Promise<MachineInfo | undefined> {
         if (this.sessionInfo === undefined)
             return undefined;
         if (this.sessionInfo.language === Language.Cpp) {
@@ -227,6 +212,28 @@ export class Debugger {
             return new MachineInfo(pointerSize, endianness);
         }
         return undefined;
+    }
+
+    isStopped() : boolean {
+        return this.sessionInfo !== undefined;
+    }
+
+    language(): Language | undefined {
+        if (this.sessionInfo === undefined)
+            return undefined;
+        return this.sessionInfo.language;
+    }
+
+    async machineInfo(): Promise<MachineInfo | undefined> {
+        if (this._machineInfo === undefined)
+            this._machineInfo = await this._getMachineInfo();
+        return this._machineInfo;
+    }
+
+    workspaceFolder(): string | undefined {
+        if (this.sessionInfo === undefined)
+            return undefined;
+        return this.sessionInfo.session.workspaceFolder?.uri.fsPath;
     }
 
     private _isPythonError(type: string): boolean {
@@ -348,7 +355,27 @@ export class Debugger {
         }
         return result;
     }
-    
+
+    async getAddress(expression: string): Promise<string | undefined> {
+        if (this.sessionInfo?.language === Language.Cpp) {
+            return await this.getValue("&(" + expression + ")");
+        }
+        return undefined;
+    }
+
+    async getSize(expression: string): Promise<number | undefined> {
+        if (this.sessionInfo?.language === Language.Cpp) {
+            const resultStr = await this.getValue("sizeof(" + expression + ")");
+            if (resultStr === undefined)
+                return undefined;
+            const result = Number.parseInt(resultStr);
+            if (Number.isNaN(result))
+                return undefined;
+            return result;
+        }
+        return undefined;
+    }
+
     async evaluate(expression: string, context: string | undefined = undefined) {
         if (this.sessionInfo === undefined)
             return undefined;
@@ -383,4 +410,5 @@ export class Debugger {
     }
 
     private sessionInfo: SessionInfo | undefined = undefined;
+    private _machineInfo: MachineInfo | undefined = undefined;
 }

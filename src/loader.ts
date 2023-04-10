@@ -234,72 +234,101 @@ export class Container {
         return undefined;
     }
     async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
-        return 0;
+        return Number.NaN;
     }
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {}
+    async forEachElement(dbg: debug.Debugger, variable: Variable, predicate: (elStr: string) => Promise<boolean>): Promise<boolean> {
+        return false;
+    }
+    async forEachMemoryBlock(dbg: debug.Debugger, variable: Variable, predicate: (buffer: Buffer, offset: number, count: number) => boolean): Promise<boolean> {
+        return false;
+    }
 }
 
-export class RandomAccessContainer extends Container {}
-
-export class ContiguousContainer extends RandomAccessContainer {}
-
-// Static array
-export class Array extends ContiguousContainer
+export class ArrayBase extends Container
 {
-    constructor(private _start: Expression, private _size: Expression) {
+    constructor(protected _start: Expression) {
         super();
     }
 
     element(variable: Variable): string | undefined {
         return '(' + this._start.toString(variable) + ')[0]';
+    }
+
+    async forEachElement(dbg: debug.Debugger, variable: Variable, predicate: (elStr: string) => Promise<boolean>): Promise<boolean> {
+        const size = await this.size(dbg, variable);
+        if (Number.isNaN(size) || size < 0)
+            return false;
+        for (let i = 0; i < size; ++i) {
+            const elStr = '(' + this._start.toString(variable) + ')[' + i.toString() + ']';
+            const ok = await predicate(elStr);
+            if (! ok)
+                return false;
+        }
+        return true;
+    }
+
+    async forEachMemoryBlock(dbg: debug.Debugger, variable: Variable, predicate: (buffer: Buffer, offset: number, count: number) => boolean): Promise<boolean> {
+        // TODO: if not contingeous return false
+        
+        const size = await this.size(dbg, variable);
+        if (Number.isNaN(size) || size < 0)
+            return false;
+        if (size == 0)
+            return true;
+        const elStr = this.element(variable);
+        if (elStr === undefined)
+            return false;
+        const a = await dbg.getAddress(elStr);
+        if (a === undefined)
+            return false;
+        const t = await dbg.getType(elStr);
+        if (t === undefined)
+            return false;
+        const bsStr = await dbg.getValue('sizeof(' + t + '[' + size + '])');
+        if (bsStr === undefined)
+            return false;
+        const bs = Number.parseInt(bsStr);
+        if (Number.isNaN(bs) || bs <= 0)
+            return false;
+        const buffer = await dbg.readMemoryBuffer(a, 0, bs);
+        if (buffer === undefined || buffer.byteLength !== bs)
+            return false;
+        if (bs % size !== 0)
+            return false;
+        const es = bs / size;
+        for (let i = 0; i < size; ++i) {
+            const ok = predicate(buffer, i * es, es);
+            if (! ok)
+                return false;
+        }
+        return true;
+    }
+}
+
+// Array defined by start and size
+export class Array extends ArrayBase
+{
+    constructor(start: Expression, private _size: Expression) {
+        super(start);
     }
 
     async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = this._size.toString(variable);
-        // TODO: Check if it's possible to parse size at this point
         const sizeVal = await dbg.getValue(sizeStr);
-        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
-    }
-
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
-        const size = await this.size(dbg, variable);
-        if (! (size > 0)) // also handle NaN
-            return;
-        // NOTE: This loop could be done asynchroniously with await Promise.all()
-        //   but an array can potentially store great number of objects so there
-        //   would be great number of promises. And it will not be possible to
-        //   end fast in case of error because the program would wait for all.
-        for (let i = 0; i < size; ++i) {
-            const elStr = '(' + this._start.toString(variable) + ')[' + i.toString() + ']';
-            yield elStr;
-        }
+        return sizeVal !== undefined ? parseInt(sizeVal) : Number.NaN;
     }
 }
 
-// Dynamic array
-export class DArray extends RandomAccessContainer {
-    constructor(private _start: Expression, private _finish: Expression) {
-        super();
-    }
-
-    element(variable: Variable): string | undefined {
-        return '(' + this._start.toString(variable) + ')[0]';
+// Array defined as start and finish
+export class DArray extends ArrayBase {
+    constructor(start: Expression, private _finish: Expression) {
+        super(start);
     }
 
     async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = '(' + this._finish.toString(variable) + ')-(' + this._start.toString(variable) + ')';
         const sizeVal = await dbg.getValue(sizeStr);
-        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
-    }
-
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
-        const size = await this.size(dbg, variable);
-        if (! (size > 0)) // also handle NaN
-            return;
-        for (let i = 0; i < size; ++i) {
-            const elStr = '(' + this._start.toString(variable) + ')[' + i.toString() + ']';
-            yield elStr;
-        }
+        return sizeVal !== undefined ? parseInt(sizeVal) : Number.NaN;
     }
 }
 
@@ -324,30 +353,35 @@ export class LinkedList extends Container
 
     async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = this._size.toString(variable);
-        // TODO: Check if it's possible to parse size at this point
         const sizeVal = await dbg.getValue(sizeStr);
-        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
+        return sizeVal !== undefined ? parseInt(sizeVal) : Number.NaN;
     }
 
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
+    async forEachElement(dbg: debug.Debugger, variable: Variable, predicate: (elStr: string) => Promise<boolean>): Promise<boolean> {
         const size = await this.size(dbg, variable);
-        if (! (size > 0)) // also handle NaN
-            return;
-        
+        if (Number.isNaN(size) || size < 0)
+            return false;
+        if (size == 0)
+            return true;
         const headName = '(' + this._head.toString(variable) + ')';
         // TEMP: The original type is used by expression to get Tparams, not the node's type
         let nodeVar = new Variable(headName, variable.type);
         for (let i = 0; i < size; ++i) {
             const elStr = '(' + this._value.toString(nodeVar) + ')';
-            yield elStr;
+            const ok = predicate(elStr);
+            if (! ok)
+                return false;
             nodeVar.name = '(' + this._next.toString(nodeVar) + ')';
         }
+        return true;
     }
 }
 
 // Unit
 
 export enum Unit { None, Degree, Radian };
+
+//export class MemoryLayout {}
 
 // Value
 
@@ -367,6 +401,10 @@ export class Loader {
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         return undefined;
     }
+
+    // async loadMemoryLayout(dbg: debug.Debugger, variable: Variable): Promise<MemoryLayout | undefined> {        
+    //     return undefined;
+    // }
 }
 
 // Containers of drawables
@@ -379,13 +417,46 @@ export class Numbers extends ContainerLoader {
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         let ys: number[] = [];
-        for await (let elStr of this._container.elements(dbg, variable)) {
+
+        // TEST vvvv
+        // const elStr = this._container.element(variable);
+        // if (elStr !== undefined) {
+        //     const elType = await dbg.getType(elStr);
+        //     if (elType !== undefined) {
+        //         const machineInfo = await dbg.machineInfo();
+        //         // get memory reader for fundamental type
+        //         const ok = await this._container.forEachMemoryBlock(dbg, variable, (buffer: Buffer, offset: number, count: number) => {
+        //             if (elType === 'int') {
+        //                 if (count == 4) {
+        //                     if (machineInfo?.endianness === debug.Endianness.Big)
+        //                         ys.push(buffer.readInt32BE(offset));
+        //                     else if (machineInfo?.endianness === debug.Endianness.Little)
+        //                         ys.push(buffer.readInt32LE(offset));
+        //                 }
+        //                 else if (count == 8) {
+        //                     if (machineInfo?.endianness === debug.Endianness.Big)
+        //                         ys.push(Number(buffer.readBigInt64BE(offset)));
+        //                     else if (machineInfo?.endianness === debug.Endianness.Little)
+        //                         ys.push(Number(buffer.readBigInt64LE(offset)));
+        //                 }
+        //             }
+        //             return true;
+        //         });
+        //     }
+        // }
+        // TEST ^^^^
+        
+        const ok = await this._container.forEachElement(dbg, variable, async (elStr: string) => {
             const elVal = await dbg.getValue(elStr);
             if (elVal === undefined)
-                return undefined;
+                return false;
             const el = parseFloat(elVal);
             ys.push(el);
-        }
+            return true;
+        });
+        if (! ok)
+            return undefined;
+        
         return new draw.Plot(util.indexesArray(ys), ys, draw.System.None);
     }
 }
@@ -396,13 +467,16 @@ export class Values extends ContainerLoader {
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         let ys: number[] = [];
-        for await (let elStr of this._container.elements(dbg, variable)) {
+        const ok = await this._container.forEachElement(dbg, variable, async (elStr: string) => {
             const v = new Variable(elStr, this._valueType);
             const n = await this._value.load(dbg, v);
             if (n === undefined)
-                return undefined
+                return false;
             ys.push(n);
-        }
+            return true;
+        });
+        if (! ok)
+            return undefined;
         return new draw.Plot(util.indexesArray(ys), ys, draw.System.None);
     }
 }
@@ -415,16 +489,19 @@ export class Points extends ContainerLoader {
         let xs: number[] = [];
         let ys: number[] = [];
         let system = draw.System.None;
-        for await (let elStr of this._container.elements(dbg, variable)) {
+        const ok = await this._container.forEachElement(dbg, variable, async (elStr: string) => {
             let v = new Variable(elStr, this._pointType);
             const point = await this._point.load(dbg, v);
             if (point === undefined)
-                return undefined;
+                return false;
             const p = point as draw.Point;
             xs.push(p.x)
             ys.push(p.y);
             system = p.system;
-        }
+            return true;
+        });
+        if (! ok)
+            return undefined;
         return new draw.Plot(xs, ys, system);
     }
 }
@@ -435,13 +512,16 @@ export class Geometries extends ContainerLoader {
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         let drawables: draw.Drawable[] = [];
-        for await (let elStr of this._container.elements(dbg, variable)) {
+        const ok = await this._container.forEachElement(dbg, variable, async (elStr: string) => {
             const v = new Variable(elStr, this._geometryType);
             const d = await this._geometry.load(dbg, v);
             if (d === undefined)
-                return undefined;
+                return false;
             drawables.push(d);
-        }
+            return true;
+        });
+        if (! ok)
+            return undefined;
         return new draw.Drawables(drawables);
     }
 }
@@ -450,6 +530,14 @@ export class Geometries extends ContainerLoader {
 
 export class Geometry extends Loader {
 }
+
+
+// export class PointMemoryLayout extends MemoryLayout {
+//     constructor(private _xOffset: number, private _xSize: number,
+//                 private _yOffset: number, private _ySize: number) {
+//         super();
+//     }
+// }
 
 export class Point extends Geometry {
     constructor(
@@ -476,8 +564,34 @@ export class Point extends Geometry {
             x *= r2d;
             y *= r2d;
         }
+
+        // TEST vvvv
+        //const test = await this.loadMemoryOffsets(dbg, variable);
+        // TEST ^^^^
+
         return new draw.Point(x, y, this._system);
     }
+
+    // TEST vvvv
+    // async loadMemoryOffsets(dbg: debug.Debugger, variable: Variable): Promise<MemoryLayout | undefined> {
+    //     const addr = await dbg.getAddress(variable.name);
+    //     const size = await dbg.getSize(variable.name);
+    //     const xStr = this._xEval.expression.toString(variable);
+    //     const xAddr = await dbg.getAddress(xStr); // Type could be extracted here from pointer
+    //     const xSize = await dbg.getSize(xStr);
+    //     const xType = await dbg.getType(xStr); // Can type be an alias?
+    //     const yStr = this._yEval.expression.toString(variable);
+    //     const yAddr = await dbg.getAddress(yStr); // Type could be extracted here from pointer
+    //     const ySize = await dbg.getSize(yStr);
+    //     const yType = await dbg.getType(yStr); // Can type be an alias?
+    //     if (addr === undefined || xAddr === undefined || yAddr === undefined || xSize === undefined || ySize === undefined)
+    //         return;
+    //     const offsets = util.smallPositiveOffsets(addr, [xAddr, yAddr]);
+    //     if (offsets === undefined)
+    //         return undefined;
+    //     return new PointMemoryLayout(offsets[0], xSize, offsets[1], ySize);
+    // }
+    // TEST ^^^^
 }
 
 export class PointsRange extends Geometry {
@@ -746,24 +860,27 @@ export class GeometryCollection extends ContainerLoader {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        let drawables: draw.Drawable[] = [];        
-        for await (let elStr of this._container.elements(dbg, variable)) {
+        let drawables: draw.Drawable[] = [];
+        const ok = await this._container.forEachElement(dbg, variable, async (elStr: string) => {
             const elType = await dbg.getRawType(elStr);
             if (elType === undefined)
-                return undefined;
+                return false;
             const v = new Variable(elStr, elType);
             let elLoad = this._loaders.get(elType);
             if (elLoad === undefined) {
                 elLoad = await getLoader(dbg, v);
                 if (elLoad === undefined)
-                    return undefined;    
+                    return false;    
                 this._loaders.set(elType, elLoad);
             }
             const d = await elLoad.load(dbg, v);
             if (d === undefined)
-                return undefined;
+                return false;
             drawables.push(d);
-        }
+            return true;
+        });
+        if (! ok)
+            return undefined;
         return new draw.Drawables(drawables);
     }
 

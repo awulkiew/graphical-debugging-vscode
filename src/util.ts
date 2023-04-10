@@ -205,3 +205,18 @@ export function cppType(str: string): string {
     }
     return str; // or '' or undefined
 }
+
+export function smallPositiveOffsets(fromStr: string, toStrs: string[]): number[] | undefined {
+    const from = BigInt(fromStr);
+    let result: number[] = Array(toStrs.length).fill(0);
+    for (let i = 0; i < toStrs.length; ++i) {
+        const to = BigInt(toStrs[i]);
+        const diff = to - from;
+        if (diff < 0 || diff > Number.MAX_SAFE_INTEGER)
+            return undefined;
+        result[i] = Number(diff);
+        if (Number.isNaN(result[i]))
+            return undefined;
+    }
+    return result;
+}
