@@ -45,7 +45,7 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 * Containers of values, points and other geometries
   * `Array`
 
-##### Python (python, Jupyter Notebook / Python Kernel Debug Adapter)
+##### Python (python, debugpy, Jupyter Notebook / Python Kernel Debug Adapter)
 
 * Containers of values, points and other geometries
   * `deque`, `list`
