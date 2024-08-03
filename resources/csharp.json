@@ -1,0 +1,32 @@
+{
+    "name": "graphicaldebugging",
+    "language": "csharp",
+    "types": [
+        {
+            "type": "[a-zA-Z_][\\w<,>:\\s]*\\[\\]",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.Length"
+            },
+            "_comment": "C# array"
+        },
+        {
+            "type": "System.Collections.Generic.List<.+>",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.Count"
+            }
+        },
+        {
+            "type": "System.Drawing.Point",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.X",
+                "y": "$this.Y"
+            }
+        }
+    ]
+}

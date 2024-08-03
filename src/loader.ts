@@ -984,6 +984,7 @@ export class Types {
     private _stringToLanguage(name: string | undefined): debug.Language | undefined {
         switch(name){
             case 'cpp': return debug.Language.Cpp;
+            case 'csharp': return debug.Language.CSharp;
             case 'java': return debug.Language.Java;
             case 'javascript': return debug.Language.JavaScript;
             case 'python': return debug.Language.Python;

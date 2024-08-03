@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as util from './util'
 import { DebugProtocol } from 'vscode-debugprotocol';
 
+export enum Language { Cpp, CSharp, Java, JavaScript, Python, Ruby };
+
 export class SessionInfo {
     constructor(
         public session: vscode.DebugSession,
@@ -19,13 +21,15 @@ export class SessionInfo {
             return undefined;
         if (['cppvsdbg', 'cppdbg', 'lldb', 'cortex-debug'].includes(sessionType))
             return Language.Cpp;
-        else if (['python', 'debugpy', 'Python Kernel Debug Adapter'].includes(sessionType))
-            return Language.Python;
+        else if (['coreclr'].includes(sessionType))
+            return Language.CSharp;
+        else if (['java'].includes(sessionType))
+            return Language.Java;
         else if (['node', 'chrome', 'msedge', 'pwa-node', 'pwa-chrome', 'pwa-msedge'].includes(sessionType))
             return Language.JavaScript;
-        else if (sessionType === 'java')
-            return Language.Java;
-        else if (sessionType === 'rdbg')
+        else if (['python', 'debugpy', 'Python Kernel Debug Adapter'].includes(sessionType))
+            return Language.Python;
+        else if (['rdbg'].includes(sessionType))
             return Language.Ruby;
         else
             return undefined;
@@ -71,8 +75,6 @@ export class MachineInfo {
         public endianness: Endianness)
     {}
 }
-
-export enum Language { Cpp, Java, JavaScript, Python, Ruby };
 
 export class Debugger {
     private _onStopped: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();

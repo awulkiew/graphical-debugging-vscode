@@ -10,7 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.9.0]
 ### Added
-- Support for debugpy
+- Support for debugpy Python debugger
+- Support for coreclr C# debugger
+- Visualization of C# array, Generic.List and Drawing.Point
 ### Fixed
 - Visualization of Shapely geometries
 

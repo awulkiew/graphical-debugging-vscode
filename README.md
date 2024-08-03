@@ -40,6 +40,14 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
   * Boost.Geometry: `box`, `linestring`, `multi_linestring`, `multi_point`, `multi_polygon`, `point`, `point_xy`, `point_xyz`, `polygon`, `ring`, `segment`
   * Boost.Polygon: `point_data`, `polygon_data`, `polygon_with_holes_data`, `rectangle_data`, `segment_data`
 
+##### C# (coreclr)
+
+* Containers of values, points and other geometries
+  * Array
+  * System.Collections.Generic: `List`
+* 2D values/geometries
+  * System.Drawing: `Point`
+
 ##### Javascript (chrome, msedge, node, pwa-node, pwa-chrome, pwa-msedge)
 
 * Containers of values, points and other geometries
