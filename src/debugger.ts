@@ -19,7 +19,7 @@ export class SessionInfo {
             return undefined;
         if (['cppvsdbg', 'cppdbg', 'lldb', 'cortex-debug'].includes(sessionType))
             return Language.Cpp;
-        else if (['python', 'Python Kernel Debug Adapter'].includes(sessionType))
+        else if (['python', 'debugpy', 'Python Kernel Debug Adapter'].includes(sessionType))
             return Language.Python;
         else if (['node', 'chrome', 'msedge', 'pwa-node', 'pwa-chrome', 'pwa-msedge'].includes(sessionType))
             return Language.JavaScript;
@@ -230,7 +230,7 @@ export class Debugger {
     }
 
     private _isPythonError(type: string): boolean {
-        return (type === 'NameError' || type === 'AttributeError') && this.sessionInfo?.language === Language.Python;
+        return (type === 'NameError' || type === 'AttributeError' || type === 'TypeError') && this.sessionInfo?.language === Language.Python;
     }
 
     private _isRubyError(type: string): boolean {

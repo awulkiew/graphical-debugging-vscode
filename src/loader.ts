@@ -446,6 +446,35 @@ export class Geometries extends ContainerLoader {
     }
 }
 
+export class DynamicGeometries extends ContainerLoader {
+    constructor(private _container: Container) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        let drawables: draw.Drawable[] = [];
+        for await (let elStr of this._container.elements(dbg, variable)) {
+            const elType = await dbg.getRawType(elStr);
+            if (elType === undefined)
+                return undefined;
+            const v = new Variable(elStr, elType);
+            let elLoad = this._loaders.get(elType);
+            if (elLoad === undefined) {
+                elLoad = await getLoader(dbg, v);
+                if (elLoad === undefined)
+                    return undefined;    
+                this._loaders.set(elType, elLoad);
+            }
+            const d = await elLoad.load(dbg, v);
+            if (d === undefined)
+                return undefined;
+            drawables.push(d);
+        }
+        return new draw.Drawables(drawables);
+    }
+
+    private _loaders: Map<string, Geometry> = new Map<string, Geometry>();
+}
+
 // Geometric primitives
 
 export class Geometry extends Loader {
@@ -741,33 +770,28 @@ export class Polygon extends Geometry {
     private _intLoad: Geometries | undefined = undefined;
 }
 
-export class GeometryCollection extends ContainerLoader {
-    constructor(private _container: Container) {
+export class MultiGeometry extends Geometry {
+    constructor(private _containerExpr: EvaluatedExpression,
+                private _geometriesLoad: Geometries) {
         super();
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
-        let drawables: draw.Drawable[] = [];        
-        for await (let elStr of this._container.elements(dbg, variable)) {
-            const elType = await dbg.getRawType(elStr);
-            if (elType === undefined)
-                return undefined;
-            const v = new Variable(elStr, elType);
-            let elLoad = this._loaders.get(elType);
-            if (elLoad === undefined) {
-                elLoad = await getLoader(dbg, v);
-                if (elLoad === undefined)
-                    return undefined;    
-                this._loaders.set(elType, elLoad);
-            }
-            const d = await elLoad.load(dbg, v);
-            if (d === undefined)
-                return undefined;
-            drawables.push(d);
-        }
-        return new draw.Drawables(drawables);
+        const contStr = this._containerExpr.expression.toString(variable);
+        const contVar = new Variable(contStr, this._containerExpr.type);
+        return this._geometriesLoad.load(dbg, contVar);
     }
+}
 
-    private _loaders: Map<string, Geometry> = new Map<string, Geometry>();
+export class GeometryCollection extends Geometry {
+    constructor(private _containerExpr: EvaluatedExpression,
+                private _dynamicGeometriesLoad: DynamicGeometries) {
+        super();
+    }
+    async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
+        const contStr = this._containerExpr.expression.toString(variable);
+        const contVar = new Variable(contStr, this._containerExpr.type);
+        return this._dynamicGeometriesLoad.load(dbg, contVar);
+    }
 }
 
 class LanguageTypes {
@@ -1122,7 +1146,9 @@ export async function getLoader(dbg: debug.Debugger,
                     const contExpr = await evaluateExpression(dbg, variable, entry.linestrings.container.name, entry.linestrings.container.type);
                     if (contExpr) {
                         const contVar = contExpr.variable;
-                        return await getLoader(dbg, contVar, onlyContainers, onlyLinestrings);
+                        const geometriesLoad = await getLoader(dbg, contVar, onlyContainers, onlyLinestrings) as Geometries;
+                        if (geometriesLoad != undefined)
+                            return new MultiGeometry(contExpr, geometriesLoad);
                     }
                 }
                 else {
@@ -1138,7 +1164,9 @@ export async function getLoader(dbg: debug.Debugger,
                     const contExpr = await evaluateExpression(dbg, variable, entry.polygons.container.name, entry.polygons.container.type);
                     if (contExpr) {
                         const contVar = contExpr.variable;
-                        return await getLoader(dbg, contVar, onlyContainers, onlyPolygons);
+                        const geometriesLoad = await getLoader(dbg, contVar, onlyContainers, onlyPolygons) as Geometries;
+                        if (geometriesLoad != undefined)
+                            return new MultiGeometry(contExpr, geometriesLoad);
                     }
                 }
                 else {
@@ -1155,14 +1183,14 @@ export async function getLoader(dbg: debug.Debugger,
                     if (contExpr) {
                         const contVar = contExpr.variable;
                         const contLoad = await getContainer(dbg, contExpr.variable);
-                        if (contLoad)
-                            return new GeometryCollection(contLoad);
+                        if (contLoad !== undefined)
+                            return new GeometryCollection(contExpr, new DynamicGeometries(contLoad));
                     }
                 }
                 else {
                     const contLoad: Container | undefined = await _getContainer(dbg, variable, entry.geometries.container);
                     if (contLoad !== undefined)
-                        return new GeometryCollection(contLoad);
+                        return new DynamicGeometries(contLoad);
                 }
             }
         }
