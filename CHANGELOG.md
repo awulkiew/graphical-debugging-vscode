@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Known issues
 - The visualization is not shown after hiding the webview with another window and showing it again
 
+## [0.9.0]
+### Added
+- Support for debugpy
+### Fixed
+- Visualization of Shapely geometries
+
 ## [0.8.0]
 ### Added
 - Automatic C++ type alias unrolling in GDB and LLDB
@@ -25,7 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.6.0]
 ### Added
-- Visualization of python numpy.array
+- Visualization of Python numpy.array
 - Support for Jupyter Notebook / Python Kernel Debug Adapter
 - Support for cortex-debug
 - Direction marker at first point/value
