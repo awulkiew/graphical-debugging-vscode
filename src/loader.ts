@@ -258,7 +258,7 @@ export class Container {
 export class RandomAccessContainer extends Container {}
 export class ContiguousContainer extends RandomAccessContainer {}
 
-// Indexed array
+// Static array
 export class Array extends ContiguousContainer
 {
     constructor(private _start: Expression, private _size: Expression) {
@@ -291,7 +291,7 @@ export class Array extends ContiguousContainer
     }
 }
 
-// Indexed array with size defined by two pointers
+// Dynamic array
 export class DArray extends ContiguousContainer {
     constructor(private _start: Expression, private _finish: Expression) {
         super();
@@ -318,6 +318,7 @@ export class DArray extends ContiguousContainer {
     }
 }
 
+// Indexable/subscriptable array
 export class IArray extends RandomAccessContainer
 {
     constructor(private _element: Expression, private _size: Expression) {
