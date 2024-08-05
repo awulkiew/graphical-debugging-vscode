@@ -48,6 +48,17 @@ You can download this extension from [Visual Studio Marketplace](https://marketp
 * 2D values/geometries
   * System.Drawing: `Point`
 
+##### Java (java)
+
+* Containers of values, points and other geometries
+  * Array
+  * java.util: `ArrayList`, `LinkedList`, `Vector`
+* 1D values
+  * java.lang: `Byte`, `Double`, `Float`, `Integer`, `Long`, `Short`
+* 2D values/geometries
+  * java.awt: `Point`
+  * java.awt.geom: `Point2D.Double`, `Point2D.Float`
+
 ##### Javascript (chrome, msedge, node, pwa-node, pwa-chrome, pwa-msedge)
 
 * Containers of values, points and other geometries

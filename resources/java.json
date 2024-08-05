@@ -1,0 +1,96 @@
+{
+    "name": "graphicaldebugging",
+    "language": "java",
+    "types": [
+        {
+            "type": "[a-zA-Z_][\\w<,>:\\s]*\\[\\]",
+            "kind": "container",
+            "array": {
+                "start": "$this",
+                "size": "$this.length"
+            },
+            "_comment": "Java array"
+        },
+        {
+            "type": "ArrayList",
+            "kind": "container",
+            "iarray": {
+                "element": "$this.get($i)",
+                "size": "$this.size()"
+            }
+        },
+        {
+            "type": "LinkedList",
+            "kind": "container",
+            "iarray": {
+                "element": "$this.get($i)",
+                "size": "$this.size()"
+            }
+        },
+        {
+            "type": "Vector",
+            "kind": "container",
+            "iarray": {
+                "element": "$this.get($i)",
+                "size": "$this.size()"
+            }
+        },
+        {
+            "type": "Point",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.x",
+                "y": "$this.y"
+            }
+        },
+        {
+            "type": "Point2D.Double",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.x",
+                "y": "$this.y"
+            }
+        },
+        {
+            "type": "Point2D.Float",
+            "kind": "point",
+            "system": "cartesian",
+            "coordinates": {
+                "x": "$this.x",
+                "y": "$this.y"
+            }
+        },
+        {
+            "type": "Byte",
+            "kind": "value",
+            "name": "$this.value"
+        },
+        {
+            "type": "Double",
+            "kind": "value",
+            "name": "$this.value"
+        },
+        {
+            "type": "Float",
+            "kind": "value",
+            "name": "$this.value"
+        },
+        {
+            "type": "Integer",
+            "kind": "value",
+            "name": "$this.value"
+        },
+        {
+            "type": "Long",
+            "kind": "value",
+            "name": "$this.value"
+        },
+        {
+            "type": "Short",
+            "kind": "value",
+            "name": "$this.value"
+        }        
+    ]
+}

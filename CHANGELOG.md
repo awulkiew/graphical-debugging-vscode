@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Known issues
 - The visualization is not shown after hiding the webview with another window and showing it again
 
+## [0.10.0]
+### Added
+- Support for Java
+- Visualization of Java arrays, numbers and points
+
 ## [0.9.0]
 ### Added
 - Support for debugpy Python debugger

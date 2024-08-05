@@ -100,24 +100,27 @@ export class Variable {
 
 
 interface IExpressionPart {
-    toString(variable: Variable): string;
+    toString(variable: Variable, parameter: number | undefined): string;
 }
 class ExpressionString implements IExpressionPart {
     constructor(private _str: string) {}
-    toString(variable: Variable): string { return this._str; }
+    toString(variable: Variable, parameter: number | undefined): string { return this._str; }
 }
 class ExpressionThis implements IExpressionPart {
-    toString(variable: Variable): string { return '(' + variable.name + ')'; }
+    toString(variable: Variable, parameter: number | undefined): string { return '(' + variable.name + ')'; }
 }
 class ExpressionNParam implements IExpressionPart {
     constructor(protected _i: number) {}
-    toString(variable: Variable): string { return variable.nparam(this._i); }
+    toString(variable: Variable, parameter: number | undefined): string { return variable.nparam(this._i); }
 }
 class ExpressionTParam extends ExpressionNParam {
-    toString(variable: Variable): string { return variable.tparam(this._i); }
+    toString(variable: Variable, parameter: number | undefined): string { return variable.tparam(this._i); }
 }
 class ExpressionType implements IExpressionPart {
-    toString(variable: Variable): string { return variable.type; }
+    toString(variable: Variable, parameter: number | undefined): string { return variable.type; }
+}
+class ExpressionIndex implements IExpressionPart {
+    toString(variable: Variable, parameter: number | undefined): string { return parameter !== undefined ? parameter.toString() : "0"; }
 }
 export class Expression
 {
@@ -148,6 +151,10 @@ export class Expression
                     this._parts.push(new ExpressionNParam(parseInt(match[0].substr(2))));
                     index = match.index + match[0].length;
                 }
+                else if (match[0] === '$i') {
+                    this._parts.push(new ExpressionIndex());
+                    index = match.index + 2;
+                }
             }
         }
         if (index < expression.length) {
@@ -155,10 +162,10 @@ export class Expression
         }
     }
 
-    toString(variable: Variable): string {
+    toString(variable: Variable, parameter: number | undefined = undefined): string {
         let result: string = '';
         for (let part of this._parts) {
-            result += part.toString(variable);            
+            result += part.toString(variable, parameter);            
         }
         // TODO: do this only for C++ ?
         // It is possible that this should depend on the debugger
@@ -194,6 +201,15 @@ async function evaluateExpression(dbg: debug.Debugger, variable: Variable, expre
         if (type !== undefined && type !== '')
             vt[1] = type;
     }
+    return new EvaluatedExpression(expr, str, vt[1]);
+}
+
+async function evaluateIndexedExpression(dbg: debug.Debugger, variable: Variable, expressionName: string, parameter: number): Promise<EvaluatedExpression | undefined> {
+	const expr = new Expression(expressionName);
+    const str = expr.toString(variable, parameter);
+    let vt = await dbg.getValueAndRawType(str);
+    if (vt === undefined)
+        return undefined;
     return new EvaluatedExpression(expr, str, vt[1]);
 }
 
@@ -240,10 +256,9 @@ export class Container {
 }
 
 export class RandomAccessContainer extends Container {}
-
 export class ContiguousContainer extends RandomAccessContainer {}
 
-// Static array
+// Indexed array
 export class Array extends ContiguousContainer
 {
     constructor(private _start: Expression, private _size: Expression) {
@@ -276,8 +291,8 @@ export class Array extends ContiguousContainer
     }
 }
 
-// Dynamic array
-export class DArray extends RandomAccessContainer {
+// Indexed array with size defined by two pointers
+export class DArray extends ContiguousContainer {
     constructor(private _start: Expression, private _finish: Expression) {
         super();
     }
@@ -298,6 +313,38 @@ export class DArray extends RandomAccessContainer {
             return;
         for (let i = 0; i < size; ++i) {
             const elStr = '(' + this._start.toString(variable) + ')[' + i.toString() + ']';
+            yield elStr;
+        }
+    }
+}
+
+export class IArray extends RandomAccessContainer
+{
+    constructor(private _element: Expression, private _size: Expression) {
+        super();
+    }
+
+    element(variable: Variable): string | undefined {
+        return this._element.toString(variable, 0);
+    }
+
+    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
+        const sizeStr = this._size.toString(variable);
+        // TODO: Check if it's possible to parse size at this point
+        const sizeVal = await dbg.getValue(sizeStr);
+        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
+    }
+
+    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
+        const size = await this.size(dbg, variable);
+        if (! (size > 0)) // also handle NaN
+            return;
+        // NOTE: This loop could be done asynchroniously with await Promise.all()
+        //   but an array can potentially store great number of objects so there
+        //   would be great number of promises. And it will not be possible to
+        //   end fast in case of error because the program would wait for all.
+        for (let i = 0; i < size; ++i) {
+            const elStr = this._element.toString(variable, i);
             yield elStr;
         }
     }
@@ -1261,6 +1308,12 @@ async function _getContainer(dbg: debug.Debugger, variable: Variable, entry: any
         const finish = await evaluateExpression(dbg, variable, entry.darray.finish);
         if (start && finish) {
             return new DArray(start.expression, finish.expression);
+        }
+    } else if (entry.iarray && entry.iarray.element && entry.iarray.size) {
+        const element = await evaluateIndexedExpression(dbg, variable, entry.iarray.element, 0);
+        const size = await evaluateExpression(dbg, variable, entry.iarray.size);
+        if (element && size) {
+            return new IArray(element.expression, size.expression);
         }
     } else if (entry.linkedlist && entry.linkedlist.size && entry.linkedlist.value) {
         if (entry.linkedlist.head && entry.linkedlist.next) {

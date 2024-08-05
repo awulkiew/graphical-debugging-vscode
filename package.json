@@ -1,6 +1,6 @@
 {
 	"name": "graphicaldebugging-vscode",
-	"version": "0.9.0",
+	"version": "0.10.0",
 	"publisher": "AdamWulkiewicz",
 	"author": {
 		"name": "Adam Wulkiewicz"
@@ -17,8 +17,8 @@
 		"Other"		
 	],
 	"keywords": [
-		"2d", "array", "boost", "box", "c", "c++", "cartesian", "chart", "complex", "container", "curve",
-		"debug", "debugging", "deque", "geographic", "geometry", "gis", "graphical", "javascript", "linestring", "list",
+		"2d", "array", "boost", "box", "c", "c++", "c#", "cartesian", "chart", "complex", "container", "curve",
+		"debug", "debugging", "deque", "geographic", "geometry", "gis", "graphical", "java", "javascript", "linestring", "list",
 		"plot", "point", "polygon", "python", "rgeo", "ring", "ruby", "segment", "shapely", "spherical", "std", "stl", "tuple", "vector",
 		"visualization", "visualize"
 	],
