@@ -588,21 +588,21 @@ export async function numericReader(dbg: Debugger, expression: string) : Promise
         return undefined;
     }
     if (dbg.language() === Language.Cpp) {
-        if (type === "double" || type === "long double" && await dbg.cppSizeOf(type) === 8) {
+        if (type === "double" || type === "long double" && await dbg.sizeOf(type) === 8) {
             return new DoubleReader(mi);
         }
         else if (type === "float") {
             return new FloatReader(mi);
         }
         else if (cppSignedIntTypes.has(type) || cppUnknownIntTypes.has(type) && await dbg.cppIsSignedInt(type) === true) {
-            const byteLength = await dbg.cppSizeOf(type);
+            const byteLength = await dbg.sizeOf(type);
             if (byteLength === undefined || byteLength < 1 || byteLength > 8) {
                 return undefined;
             }
             return new IntReader(mi, byteLength);
         }
         else if (cppUnsignedIntTypes.has(type) || cppUnknownIntTypes.has(type) && await dbg.cppIsSignedInt(type) === false) {
-            const byteLength = await dbg.cppSizeOf(type);
+            const byteLength = await dbg.sizeOf(type);
             if (byteLength === undefined || byteLength < 1 || byteLength > 8) {
                 return undefined;
             }
