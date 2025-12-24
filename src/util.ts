@@ -160,7 +160,7 @@ export function azimuth(x0: number, y0: number, x1: number, y1: number, isGeogra
     return isNaN(result) ? undefined : result * r2d;
 }
 
-export function cppRemoveTypeModifiers(str: string): string {
+export function cppRemoveCV(str: string): string {
     str = str.trim();
     if (str.startsWith('const ')) {
         str = str.substring(6);
@@ -174,6 +174,11 @@ export function cppRemoveTypeModifiers(str: string): string {
     if (str.endsWith(' const')) {
         str = str.substring(0, str.length - 6);
     }
+    return str.trimEnd();
+}
+
+export function cppRemoveCVPtrRef(str: string): string {
+    str = cppRemoveCV(str);
     if (str.endsWith('&&')) {
         str = str.substring(0, str.length - 2);
     }

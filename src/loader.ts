@@ -249,31 +249,21 @@ export class Container {
     element(variable: Variable): string | undefined {
         return undefined;
     }
-    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
-        return 0;
-    }
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {}
+    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {}    
+    async *elementsMem(dbg: debug.Debugger, variable: Variable): AsyncGenerator<Buffer, void, unknown> {}
 }
 
 export class RandomAccessContainer extends Container {}
 export class ContiguousContainer extends RandomAccessContainer {}
 
-// Static array
-export class Array extends ContiguousContainer
+export class ContiguousArray extends ContiguousContainer
 {
-    constructor(private _start: Expression, private _size: Expression) {
+    constructor(protected _start: Expression) {
         super();
     }
 
     element(variable: Variable): string | undefined {
         return '(' + this._start.toString(variable) + ')[0]';
-    }
-
-    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
-        const sizeStr = this._size.toString(variable);
-        // TODO: Check if it's possible to parse size at this point
-        const sizeVal = await dbg.getValue(sizeStr);
-        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
     }
 
     async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
@@ -289,51 +279,68 @@ export class Array extends ContiguousContainer
             yield elStr;
         }
     }
+
+    async *elementsMem(dbg: debug.Debugger, variable: Variable): AsyncGenerator<Buffer, void, unknown> {
+        let size = await this.size(dbg, variable);
+        let elStr = this.element(variable);
+        let elSizeOf = (elStr ? await dbg.sizeOf(elStr) : 0) ?? 0;
+        let elementsSizeof = size * elSizeOf;
+        if (elementsSizeof > 0)
+        {
+            let startStr = this._start.toString(variable);
+            let startExpr = await dbg.evaluate(startStr);
+		    if (startExpr && startExpr.memoryReference) {
+			    let buffer = await dbg.readMemoryBuffer(startExpr.memoryReference, 0, elementsSizeof);
+                if (buffer !== undefined) {
+                    for (let i = 0 ; i < size ; ++i) {
+                        yield buffer.slice(i * elSizeOf, i * elSizeOf + elSizeOf);
+                    }
+                }
+            }
+        }
+    }
+
+    protected async size(dbg: debug.Debugger, variable: Variable): Promise<number> { return 0; }
+}
+
+// Static array
+export class Array extends ContiguousArray {
+
+    constructor(start: Expression, private _size: Expression) {
+        super(start);
+    }
+
+    protected async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
+        const sizeStr = this._size.toString(variable);
+        // TODO: Check if it's possible to parse size at this point
+        const sizeVal = await dbg.getValue(sizeStr);
+        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
+    }
 }
 
 // Dynamic array
-export class DArray extends ContiguousContainer {
-    constructor(private _start: Expression, private _finish: Expression) {
-        super();
+export class DArray extends ContiguousArray {
+
+    constructor(start: Expression, private _finish: Expression) {
+        super(start);
     }
 
-    element(variable: Variable): string | undefined {
-        return '(' + this._start.toString(variable) + ')[0]';
-    }
-
-    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
+    protected async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
         const sizeStr = '(' + this._finish.toString(variable) + ')-(' + this._start.toString(variable) + ')';
         const sizeVal = await dbg.getValue(sizeStr);
         return sizeVal !== undefined ? parseInt(sizeVal) : 0;
     }
-
-    async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
-        const size = await this.size(dbg, variable);
-        if (! (size > 0)) // also handle NaN
-            return;
-        for (let i = 0; i < size; ++i) {
-            const elStr = '(' + this._start.toString(variable) + ')[' + i.toString() + ']';
-            yield elStr;
-        }
-    }
 }
 
 // Indexable/subscriptable array
-export class IArray extends RandomAccessContainer
-{
+export class IArray extends RandomAccessContainer {
+
     constructor(private _element: Expression, private _size: Expression) {
         super();
     }
 
     element(variable: Variable): string | undefined {
         return this._element.toString(variable, 0);
-    }
-
-    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
-        const sizeStr = this._size.toString(variable);
-        // TODO: Check if it's possible to parse size at this point
-        const sizeVal = await dbg.getValue(sizeStr);
-        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
     }
 
     async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
@@ -349,11 +356,18 @@ export class IArray extends RandomAccessContainer
             yield elStr;
         }
     }
+
+    private async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
+        const sizeStr = this._size.toString(variable);
+        // TODO: Check if it's possible to parse size at this point
+        const sizeVal = await dbg.getValue(sizeStr);
+        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
+    }
 }
 
 // TODO: Later when direct memory access is implemented allow passing pointers
-export class LinkedList extends Container
-{
+export class LinkedList extends Container {
+
     constructor(
         private _size: Expression,
         private _head: Expression,
@@ -370,13 +384,6 @@ export class LinkedList extends Container
         return this._value.toString(headVar);
     }
 
-    async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
-        const sizeStr = this._size.toString(variable);
-        // TODO: Check if it's possible to parse size at this point
-        const sizeVal = await dbg.getValue(sizeStr);
-        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
-    }
-
     async *elements(dbg: debug.Debugger, variable: Variable): AsyncGenerator<string, void, unknown> {
         const size = await this.size(dbg, variable);
         if (! (size > 0)) // also handle NaN
@@ -390,6 +397,13 @@ export class LinkedList extends Container
             yield elStr;
             nodeVar.name = '(' + this._next.toString(nodeVar) + ')';
         }
+    }
+
+    private async size(dbg: debug.Debugger, variable: Variable): Promise<number> {
+        const sizeStr = this._size.toString(variable);
+        // TODO: Check if it's possible to parse size at this point
+        const sizeVal = await dbg.getValue(sizeStr);
+        return sizeVal !== undefined ? parseInt(sizeVal) : 0;
     }
 }
 
@@ -427,15 +441,43 @@ export class Numbers extends ContainerLoader {
     }
     async load(dbg: debug.Debugger, variable: Variable): Promise<draw.Drawable | undefined> {
         let ys: number[] = [];
-        for await (let elStr of this._container.elements(dbg, variable)) {
-            const elVal = await dbg.getValue(elStr);
-            if (elVal === undefined)
-                return undefined;
-            const el = parseFloat(elVal);
-            ys.push(el);
+        // Memory read
+        // TODO: there is no need to create numericReader if container doesn't support memory read
+        const reader = await this.numericReader(dbg, variable);
+        if (reader !== undefined) {
+            for await (let elBuf of this._container.elementsMem(dbg, variable)) {
+                const el = reader.read(elBuf);
+                if (el !== undefined) {
+                    ys.push(el);
+                }
+            }
+        }
+        // TODO: should probably check real error
+        if (ys.length == 0)
+        {
+            // Parsing read
+            for await (let elStr of this._container.elements(dbg, variable)) {
+                const elVal = await dbg.getValue(elStr);
+                if (elVal === undefined)
+                    return undefined;
+                const el = parseFloat(elVal);
+                ys.push(el);
+            }
         }
         return new draw.Plot(util.indexesArray(ys), ys, draw.System.None);
     }
+
+    private async numericReader(dbg: debug.Debugger, variable: Variable) {
+        if (this._numericReader === undefined) {
+            const el = this._container.element(variable);
+            if (el !== undefined) {
+                this._numericReader = await debug.numericReader(dbg, el);
+            }
+        }
+        return this._numericReader;
+    }
+
+    private _numericReader: debug.NumericReader | undefined = undefined;
 }
 
 export class Values extends ContainerLoader {
