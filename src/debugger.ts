@@ -118,6 +118,14 @@ export class Debugger {
                 };
             }
         }));
+        context.subscriptions.push(
+            vscode.debug.onDidChangeActiveStackItem(item => {
+                if (item instanceof vscode.DebugStackFrame) {
+                    this.sessionInfo = new SessionInfo(item.session, item.threadId, item.frameId);
+                    this._onStopped.fire();
+                }
+            })
+        );
     }
 
     private _setUnavailable() {
